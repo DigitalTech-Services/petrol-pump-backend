@@ -14,12 +14,20 @@ class AdminController extends Controller
     use ApiResponse;
 
     private array $userFields = [
-        'id', 'parent_user_id', 'type', 'name', 'email',
-        'created_at', 'created_by_id', 'created_by_name', 'created_host_name', 'created_ip',
-        'updated_at', 'updated_by_id', 'updated_by_name', 'updated_host_name', 'updated_ip',
+        'id',
+        'parent_user_id',
+        'type',
+        'name',
+        'email',
+        'contact',
+        'created_at',
+        'created_by_id',
+        'created_by_name',
+        'updated_at',
+        'updated_by_id',
+        'updated_by_name',
     ];
 
-    // POST /api/admin/login
     public function login(Request $request): JsonResponse
     {
         try {
@@ -30,7 +38,7 @@ class AdminController extends Controller
 
             $admin = Admin::where('username', $request->input('username'))->first();
 
-            if (! $admin || ! Hash::check($request->input('password'), $admin->password)) {
+            if (!$admin || !Hash::check($request->input('password'), $admin->password)) {
                 return $this->error('The provided credentials are incorrect.', 401);
             }
 
@@ -47,7 +55,6 @@ class AdminController extends Controller
         }
     }
 
-    // POST /api/admin/logout
     public function logout(Request $request): JsonResponse
     {
         try {
@@ -59,7 +66,6 @@ class AdminController extends Controller
         }
     }
 
-    // GET /api/admin/users
     public function indexUsers(): JsonResponse
     {
         try {
@@ -71,20 +77,21 @@ class AdminController extends Controller
         }
     }
 
-    // POST /api/admin/users
     public function storeUser(Request $request): JsonResponse
     {
         try {
             $data = $request->validate([
-                'name'     => 'required|string|max:255',
-                'email'    => 'required|email|unique:users,email',
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email',
+                'contact' => 'required|unique:users,contact',
                 'password' => 'required|string|min:8',
             ]);
 
             $user = User::create([
-                'type'     => 'user',
-                'name'     => $data['name'],
-                'email'    => $data['email'],
+                'type' => 'user',
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'contact' => $data['contact'],
                 'password' => Hash::make($data['password']),
             ]);
 
@@ -94,11 +101,13 @@ class AdminController extends Controller
         }
     }
 
-    // GET /api/admin/users/{id}
-    public function showUser(int $id): JsonResponse
+    public function showUser(Request $request): JsonResponse
     {
         try {
-            $user = User::findOrFail($id);
+            $data = $request->validate([
+                'user_id' => 'required|int',
+            ]);
+            $user = User::findOrFail($data['user_id']);
 
             return $this->success('User fetched', ['user' => $user->only($this->userFields)]);
         } catch (\Exception $e) {
@@ -106,21 +115,19 @@ class AdminController extends Controller
         }
     }
 
-    // PUT /api/admin/users/{id}
-    public function updateUser(Request $request, int $id): JsonResponse
+    public function updateUser(Request $request): JsonResponse
     {
         try {
-            $user = User::findOrFail($id);
-
             $data = $request->validate([
-                'name'     => 'sometimes|string|max:255',
-                'email'    => "sometimes|email|unique:users,email,{$user->id}",
-                'password' => 'sometimes|string|min:8',
+                'user_id' => 'required|int',
             ]);
 
-            if (isset($data['password'])) {
-                $data['password'] = Hash::make($data['password']);
-            }
+            $user = User::findOrFail($data['user_id']);
+
+            $data = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'email' => "sometimes|email|unique:users,email,{$user->id}",
+            ]);
 
             $user->update($data);
 
@@ -130,11 +137,14 @@ class AdminController extends Controller
         }
     }
 
-    // DELETE /api/admin/users/{id}
-    public function destroyUser(int $id): JsonResponse
+    public function destroyUser(Request $request): JsonResponse
     {
         try {
-            $user = User::findOrFail($id);
+           $data = $request->validate([
+                'user_id' => 'required|int',
+            ]);
+
+            $user = User::findOrFail($data['user_id']);
             $user->delete();
 
             return $this->success('User deleted');

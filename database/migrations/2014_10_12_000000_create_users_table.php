@@ -14,20 +14,21 @@ return new class extends Migration
             $table->enum('type', ['user', 'sub_user'])->default('user');
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('contact', 10)->unique();
             $table->string('password');
             $table->rememberToken();
 
             // Audit columns
+            $table->string('created_at', 45)->nullable();
             $table->unsignedBigInteger('created_by_id')->nullable();
             $table->string('created_by_name')->nullable();
             $table->string('created_host_name')->nullable();
             $table->string('created_ip', 45)->nullable();
+            $table->string('updated_at', 45)->nullable();
             $table->unsignedBigInteger('updated_by_id')->nullable();
             $table->string('updated_by_name')->nullable();
             $table->string('updated_host_name')->nullable();
             $table->string('updated_ip', 45)->nullable();
-
-            $table->timestamps();
         });
     }
 

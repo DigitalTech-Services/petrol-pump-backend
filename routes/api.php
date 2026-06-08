@@ -11,11 +11,11 @@ Route::post('/admin/login', [AdminController::class, 'login']);
 
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::post('/logout',        [AdminController::class, 'logout']);
-    Route::get('/users',          [AdminController::class, 'indexUsers']);
-    Route::post('/users',         [AdminController::class, 'storeUser']);
-    Route::get('/users/{id}',     [AdminController::class, 'showUser']);
-    Route::put('/users/{id}',     [AdminController::class, 'updateUser']);
-    Route::delete('/users/{id}',  [AdminController::class, 'destroyUser']);
+    Route::post('/users',          [AdminController::class, 'indexUsers']);
+    Route::post('/add-user',         [AdminController::class, 'storeUser']);
+    Route::post('/get-user-details',     [AdminController::class, 'showUser']);
+    Route::post('/update-user',     [AdminController::class, 'updateUser']);
+    Route::post('/delete-user',  [AdminController::class, 'destroyUser']);
 });
 
 // -------------------------------------------------
@@ -25,12 +25,12 @@ Route::post('/user/login', [UserController::class, 'login']);
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/logout',              [UserController::class, 'logout']);
-    Route::get('/profile',              [UserController::class, 'profile']);
+    Route::post('/profile',              [UserController::class, 'profile']);
 
     // Sub-user management
-    Route::get('/sub-users',            [UserController::class, 'indexSubUsers']);
-    Route::post('/sub-users',           [UserController::class, 'storeSubUser']);
-    Route::get('/sub-users/{id}',       [UserController::class, 'showSubUser']);
-    Route::put('/sub-users/{id}',       [UserController::class, 'updateSubUser']);
-    Route::delete('/sub-users/{id}',    [UserController::class, 'destroySubUser']);
+    Route::post('/sub-users',            [UserController::class, 'indexSubUsers']);
+    Route::post('/add-sub-user',           [UserController::class, 'storeSubUser']);
+    Route::post('/sub-users-details',       [UserController::class, 'showSubUser']);
+    Route::post('/sub-users/{id}',       [UserController::class, 'updateSubUser']);
+    Route::post('/sub-users/{id}',    [UserController::class, 'destroySubUser']);
 });

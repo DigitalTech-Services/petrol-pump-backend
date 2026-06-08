@@ -19,6 +19,7 @@ class User extends Authenticatable
         'type',
         'name',
         'email',
+        'contact',
         'password',
         'created_by_id',
         'created_by_name',
@@ -36,8 +37,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password'          => 'hashed',
+        'password' => 'hashed',
     ];
 
     public function parent(): BelongsTo
