@@ -68,7 +68,7 @@ class UserController extends Controller
     public function profile(Request $request): JsonResponse
     {
         try {
-            return $this->success('Profile fetched', $request->user()->only($this->userFields()));
+            return $this->success('Profile fetched!', $request->user()->only($this->userFields()));
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -82,7 +82,7 @@ class UserController extends Controller
                 ->select($this->userFields())
                 ->get();
 
-            return $this->success('Sub-users fetched', ['sub_users' => $subUsers]);
+            return $this->success('Users fetched!', ['sub_users' => $subUsers]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -91,7 +91,7 @@ class UserController extends Controller
     public function storeSubUser(Request $request): JsonResponse
     {
         try {
-            if ($request->user()->type === 'sub_user') {
+            if ($request->user()->type === 'user') {
                 return $this->error('Access denied!, You cannot create other users.', 403);
             }
 
@@ -104,7 +104,7 @@ class UserController extends Controller
 
             $subUser = User::create([
                 'parent_user_id' => $request->user()->id,
-                'type' => 'sub_user',
+                'type' => 'user',
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'contact' => $data['contact'],
