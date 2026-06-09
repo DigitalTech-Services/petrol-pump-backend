@@ -88,7 +88,7 @@ class AdminController extends Controller
             ]);
 
             $user = User::create([
-                'type' => 'admin',
+                'type' => 'user',
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'contact' => $data['contact'],

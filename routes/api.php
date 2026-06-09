@@ -28,9 +28,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/profile',              [UserController::class, 'profile']);
 
     // Sub-user management
-    Route::post('/sub-users',            [UserController::class, 'indexSubUsers']);
-    Route::post('/add-sub-user',           [UserController::class, 'storeSubUser']);
-    Route::post('/sub-users-details',       [UserController::class, 'showSubUser']);
-    Route::post('/sub-users/{id}',       [UserController::class, 'updateSubUser']);
-    Route::post('/sub-users/{id}',    [UserController::class, 'destroySubUser']);
+    Route::post('/sub-users',         [UserController::class, 'indexSubUsers']);
+    Route::post('/add-sub-user',      [UserController::class, 'storeSubUser']);
+    Route::post('/sub-users-details', [UserController::class, 'showSubUser']);
+    Route::post('/update-sub-user',   [UserController::class, 'updateSubUser']);
+    Route::post('/delete-sub-user',   [UserController::class, 'destroySubUser']);
 });

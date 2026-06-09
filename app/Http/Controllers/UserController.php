@@ -91,8 +91,8 @@ class UserController extends Controller
     public function storeSubUser(Request $request): JsonResponse
     {
         try {
-            if ($request->user()->type === 'user') {
-                return $this->error('Access denied!, You cannot create other users.', 403);
+            if ($request->user()->type !== 'user') {
+                return $this->error('Access denied! Only the main user can create managers.', 403);
             }
 
             $data = $request->validate([
@@ -104,7 +104,7 @@ class UserController extends Controller
 
             $subUser = User::create([
                 'parent_user_id' => $request->user()->id,
-                'type' => 'user',
+                'type' => 'sub_user',
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'contact' => $data['contact'],
