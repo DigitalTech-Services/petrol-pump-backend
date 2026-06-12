@@ -245,7 +245,7 @@ class StaffAttendanceController extends Controller
             $month  = $request->input('month', now()->format('Y-m')); // e.g. 2026-06
 
             $staff = Staff::where('user_id', $userId)
-                ->withSum('advances', 'amount')
+                ->withSum(['advances' => fn($q) => $q->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])], 'amount')
                 ->with(['attendance' => function ($q) use ($month) {
                     $q->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month]);
                 }])
