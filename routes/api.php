@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\UserController;
@@ -35,6 +36,29 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/sub-users-details', [UserController::class, 'showSubUser']);
     Route::post('/update-sub-user',   [UserController::class, 'updateSubUser']);
     Route::post('/delete-sub-user',   [UserController::class, 'destroySubUser']);
+});
+
+// -------------------------------------------------
+// Settings routes (owner + manager access)
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('settings')->group(function () {
+    // Station details
+    Route::get('/',                    [SettingsController::class, 'getStation']);
+    Route::put('/',                    [SettingsController::class, 'updateStation']);
+
+    // Fuel rates
+    Route::get('/fuel-rates',          [SettingsController::class, 'getFuelRates']);
+    Route::put('/fuel-rates',          [SettingsController::class, 'updateFuelRates']);
+
+    // Nozzles
+    Route::get('/nozzles',             [SettingsController::class, 'getNozzles']);
+    Route::post('/nozzles',            [SettingsController::class, 'storeNozzle']);
+    Route::put('/nozzles/{id}',        [SettingsController::class, 'updateNozzle']);
+    Route::delete('/nozzles/{id}',     [SettingsController::class, 'destroyNozzle']);
+
+    // Notification preferences
+    Route::get('/notifications',       [SettingsController::class, 'getNotifications']);
+    Route::put('/notifications',       [SettingsController::class, 'updateNotifications']);
 });
 
 // -------------------------------------------------
