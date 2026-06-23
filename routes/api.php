@@ -5,6 +5,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -74,6 +75,19 @@ Route::middleware('auth:sanctum')->prefix('expenses')->group(function () {
     Route::get('/{id}',       [ExpenseController::class, 'show']);
     Route::put('/{id}',       [ExpenseController::class, 'update']);
     Route::delete('/{id}',    [ExpenseController::class, 'destroy']);
+});
+
+// -------------------------------------------------
+// Transaction routes (owner + manager access)
+// summary registered before {id} to avoid wildcard match
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('transactions')->group(function () {
+    Route::get('/summary', [TransactionController::class, 'summary']);
+    Route::get('/',        [TransactionController::class, 'index']);
+    Route::post('/',       [TransactionController::class, 'store']);
+    Route::get('/{id}',    [TransactionController::class, 'show']);
+    Route::put('/{id}',    [TransactionController::class, 'update']);
+    Route::delete('/{id}', [TransactionController::class, 'destroy']);
 });
 
 // -------------------------------------------------
