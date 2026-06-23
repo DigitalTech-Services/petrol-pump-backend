@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
 use App\Http\Controllers\StaffController;
@@ -59,6 +60,20 @@ Route::middleware('auth:sanctum')->prefix('settings')->group(function () {
     // Notification preferences
     Route::get('/notifications',       [SettingsController::class, 'getNotifications']);
     Route::put('/notifications',       [SettingsController::class, 'updateNotifications']);
+});
+
+// -------------------------------------------------
+// Expense routes (owner + manager access)
+// Fixed paths (categories, summary) registered before {id}
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('expenses')->group(function () {
+    Route::get('/categories', [ExpenseController::class, 'categories']);
+    Route::get('/summary',    [ExpenseController::class, 'summary']);
+    Route::get('/',           [ExpenseController::class, 'index']);
+    Route::post('/',          [ExpenseController::class, 'store']);
+    Route::get('/{id}',       [ExpenseController::class, 'show']);
+    Route::put('/{id}',       [ExpenseController::class, 'update']);
+    Route::delete('/{id}',    [ExpenseController::class, 'destroy']);
 });
 
 // -------------------------------------------------
