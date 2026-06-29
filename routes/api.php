@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\MeterReadingController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
 use App\Http\Controllers\StaffController;
@@ -64,6 +67,17 @@ Route::middleware('auth:sanctum')->prefix('settings')->group(function () {
 });
 
 // -------------------------------------------------
+// Dashboard routes (aggregates from sales + meters)
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('dashboard')->group(function () {
+    Route::get('/kpis',          [DashboardController::class, 'kpis']);
+    Route::get('/daily-trend',   [DashboardController::class, 'dailyTrend']);
+    Route::get('/fuel-mix',      [DashboardController::class, 'fuelMix']);
+    Route::get('/payment-split', [DashboardController::class, 'paymentSplit']);
+    Route::get('/stock-levels',  [DashboardController::class, 'stockLevels']);
+});
+
+// -------------------------------------------------
 // Expense routes (owner + manager access)
 // Fixed paths (categories, summary) registered before {id}
 // -------------------------------------------------
@@ -75,6 +89,34 @@ Route::middleware('auth:sanctum')->prefix('expenses')->group(function () {
     Route::get('/{id}',       [ExpenseController::class, 'show']);
     Route::put('/{id}',       [ExpenseController::class, 'update']);
     Route::delete('/{id}',    [ExpenseController::class, 'destroy']);
+});
+
+// -------------------------------------------------
+// Sales routes (owner + manager access)
+// Fixed paths (summary, monthly) registered before {id}
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('sales')->group(function () {
+    Route::get('/summary', [SaleController::class, 'summary']);
+    Route::get('/monthly', [SaleController::class, 'monthly']);
+    Route::get('/',        [SaleController::class, 'index']);
+    Route::post('/',       [SaleController::class, 'store']);
+    Route::get('/{id}',    [SaleController::class, 'show']);
+    Route::put('/{id}',    [SaleController::class, 'update']);
+    Route::delete('/{id}', [SaleController::class, 'destroy']);
+});
+
+// -------------------------------------------------
+// Meter reading routes (owner + manager access)
+// Fixed paths (nozzles, summary) registered before {id}
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('meters')->group(function () {
+    Route::get('/nozzles', [MeterReadingController::class, 'nozzles']);
+    Route::get('/summary', [MeterReadingController::class, 'summary']);
+    Route::get('/',        [MeterReadingController::class, 'index']);
+    Route::post('/',       [MeterReadingController::class, 'store']);
+    Route::get('/{id}',    [MeterReadingController::class, 'show']);
+    Route::put('/{id}',    [MeterReadingController::class, 'update']);
+    Route::delete('/{id}', [MeterReadingController::class, 'destroy']);
 });
 
 // -------------------------------------------------
