@@ -128,7 +128,7 @@ class DashboardController extends Controller
                 ->get()
                 ->keyBy(fn($s) => $s->date->format('d'));
 
-            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+            $daysInMonth = (int) date('t', mktime(0, 0, 0, $month, 1, $year));
             $mix         = [];
 
             for ($d = 1; $d <= $daysInMonth; $d++) {
