@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->prefix('settings')->group(function () {
 // Dashboard routes (aggregates from sales + meters)
 // -------------------------------------------------
 Route::middleware('auth:sanctum')->prefix('dashboard')->group(function () {
+    Route::get('/summary',       [DashboardController::class, 'summary']);      // consolidated — one DB query
     Route::get('/kpis',          [DashboardController::class, 'kpis']);
     Route::get('/daily-trend',   [DashboardController::class, 'dailyTrend']);
     Route::get('/fuel-mix',      [DashboardController::class, 'fuelMix']);
