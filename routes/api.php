@@ -3,14 +3,52 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\MeterReadingController;
-use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+
+use Illuminate\Support\Facades\DB;
+
+Route::get('/ping', function () {
+    try {
+        DB::connection()->getPdo();
+
+        return response()->json([
+            'status' => 'Connected',
+            'host' => config('database.connections.mysql.host'),
+            'database' => config('database.connections.mysql.database'),
+            'username' => config('database.connections.mysql.username'),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'exception' => get_class($e),
+            'host' => config('database.connections.mysql.host'),
+            'database' => config('database.connections.mysql.database'),
+        ], 500);
+    }
+});
+
+use App\Models\User;
+
+Route::get('/ping2', function () {
+    try {
+        return [
+            "count" => User::count(),
+            "first" => User::first()
+        ];
+    } catch (\Throwable $e) {
+        return [
+            "message" => $e->getMessage(),
+            "file" => $e->getFile(),
+            "line" => $e->getLine(),
+            "trace" => $e->getTraceAsString()
+        ];
+    }
+});
 
 // -------------------------------------------------
 // Admin routes
@@ -93,34 +131,6 @@ Route::middleware('auth:sanctum')->prefix('expenses')->group(function () {
 });
 
 // -------------------------------------------------
-// Sales routes (owner + manager access)
-// Fixed paths (summary, monthly) registered before {id}
-// -------------------------------------------------
-Route::middleware('auth:sanctum')->prefix('sales')->group(function () {
-    Route::get('/summary', [SaleController::class, 'summary']);
-    Route::get('/monthly', [SaleController::class, 'monthly']);
-    Route::get('/',        [SaleController::class, 'index']);
-    Route::post('/',       [SaleController::class, 'store']);
-    Route::get('/{id}',    [SaleController::class, 'show']);
-    Route::put('/{id}',    [SaleController::class, 'update']);
-    Route::delete('/{id}', [SaleController::class, 'destroy']);
-});
-
-// -------------------------------------------------
-// Meter reading routes (owner + manager access)
-// Fixed paths (nozzles, summary) registered before {id}
-// -------------------------------------------------
-Route::middleware('auth:sanctum')->prefix('meters')->group(function () {
-    Route::get('/nozzles', [MeterReadingController::class, 'nozzles']);
-    Route::get('/summary', [MeterReadingController::class, 'summary']);
-    Route::get('/',        [MeterReadingController::class, 'index']);
-    Route::post('/',       [MeterReadingController::class, 'store']);
-    Route::get('/{id}',    [MeterReadingController::class, 'show']);
-    Route::put('/{id}',    [MeterReadingController::class, 'update']);
-    Route::delete('/{id}', [MeterReadingController::class, 'destroy']);
-});
-
-// -------------------------------------------------
 // Transaction routes (owner + manager access)
 // summary registered before {id} to avoid wildcard match
 // -------------------------------------------------
@@ -153,7 +163,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/staff/attendance/{id}',   [StaffAttendanceController::class, 'update']);
     Route::delete('/staff/attendance/{id}',[StaffAttendanceController::class, 'destroy']);
 
-    // ── Timesheet monthly summary ─────────────────
+    // ── Time sheet monthly summary ─────────────────
     Route::get('/staff/timesheet',         [StaffAttendanceController::class, 'timesheet']);
 
     // ── Staff CRUD (parameterised — must be last) ─
@@ -162,4 +172,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/staff/{id}',      [StaffController::class, 'show']);
     Route::put('/staff/{id}',      [StaffController::class, 'update']);
     Route::delete('/staff/{id}',   [StaffController::class, 'destroy']);
+});
+
+Route::get('/debug', function () {
+    try {
+        DB::connection()->getPdo();
+
+        return response()->json([
+            'status' => 'Connected',
+            'host' => config('database.connections.mysql.host'),
+            'database' => config('database.connections.mysql.database'),
+            'user' => config('database.connections.mysql.username'),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'type' => get_class($e),
+        ], 500);
+    }
 });
