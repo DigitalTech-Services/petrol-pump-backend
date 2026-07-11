@@ -17,6 +17,7 @@ class User extends Authenticatable
     protected $fillable = [
         'parent_user_id',
         'type',
+        'business_name',
         'name',
         'email',
         'contact',
@@ -63,5 +64,16 @@ class User extends Authenticatable
         }
 
         return array_merge([$this->id], $this->subUsers()->pluck('id')->all());
+    }
+
+    /**
+     * The business name shown in navigation. Owners have their own; a manager
+     * inherits the business name of the owner who created them.
+     */
+    public function resolveBusinessName(): ?string
+    {
+        return $this->type === 'sub_user'
+            ? $this->parent?->business_name
+            : $this->business_name;
     }
 }

@@ -17,6 +17,7 @@ class AdminController extends Controller
         'id',
         'parent_user_id',
         'type',
+        'business_name',
         'name',
         'email',
         'contact',
@@ -82,6 +83,7 @@ class AdminController extends Controller
         try {
             $data = $request->validate([
                 'name' => 'required|string|max:255',
+                'business_name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'contact' => 'required|unique:users,contact',
                 'password' => 'required|string|min:8',
@@ -89,6 +91,7 @@ class AdminController extends Controller
 
             $user = User::create([
                 'type' => 'user',
+                'business_name' => $data['business_name'],
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'contact' => $data['contact'],
@@ -126,6 +129,7 @@ class AdminController extends Controller
 
             $data = $request->validate([
                 'name' => 'sometimes|string|max:255',
+                'business_name' => 'sometimes|string|max:255',
                 'email' => "sometimes|email|unique:users,email,{$user->id}",
             ]);
 

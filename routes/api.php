@@ -76,6 +76,7 @@ Route::post('/user/login', [UserController::class, 'login']);
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/logout',              [UserController::class, 'logout']);
     Route::post('/profile',              [UserController::class, 'profile']);
+    Route::put('/profile',               [UserController::class, 'updateProfile']);
 
     // Sub-user (manager) management — owner only
     Route::middleware('role:user')->group(function () {

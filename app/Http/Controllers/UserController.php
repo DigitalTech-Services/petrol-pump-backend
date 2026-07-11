@@ -27,6 +27,15 @@ class UserController extends Controller
         );
     }
 
+    // Owner has their own business_name; a manager inherits the owner's.
+    private function presentUser(User $user): array
+    {
+        return array_merge(
+            $user->only($this->userFields()),
+            ['business_name' => $user->resolveBusinessName()]
+        );
+    }
+
     public function login(Request $request): JsonResponse
     {
         try {
@@ -47,7 +56,7 @@ class UserController extends Controller
 
             return $this->success('Login successful', [
                 'token' => $token,
-                'user' => $user->only($this->userFields()),
+                'user' => $this->presentUser($user),
             ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
@@ -68,7 +77,31 @@ class UserController extends Controller
     public function profile(Request $request): JsonResponse
     {
         try {
-            return $this->success('Profile fetched!', $request->user()->only($this->userFields()));
+            return $this->success('Profile fetched!', $this->presentUser($request->user()));
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
+    }
+
+    // PUT /user/profile — update own name/email; business_name is owner-only
+    public function updateProfile(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $data = $request->validate([
+                'name'          => 'sometimes|string|max:255',
+                'business_name' => 'sometimes|string|max:255',
+                'email'         => "sometimes|email|unique:users,email,{$user->id}",
+            ]);
+
+            if (isset($data['business_name']) && $user->type !== 'user') {
+                return $this->error('Only the business owner can update the business name.', 403);
+            }
+
+            $user->update($data);
+
+            return $this->success('Profile updated!', $this->presentUser($user->fresh()));
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
