@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\MeterReadingController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
@@ -120,6 +121,17 @@ Route::middleware('auth:sanctum')->prefix('dashboard')->group(function () {
     Route::get('/fuel-mix',      [DashboardController::class, 'fuelMix']);
     Route::get('/payment-split', [DashboardController::class, 'paymentSplit']);
     Route::get('/stock-levels',  [DashboardController::class, 'stockLevels']);
+});
+
+// -------------------------------------------------
+// Reports routes (owner + manager access)
+// Manager sees only their own figures; owner sees all managers combined.
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
+    Route::get('/monthly', [ReportsController::class, 'monthly']);
+    Route::get('/fuel',    [ReportsController::class, 'fuel']);
+    Route::get('/pnl',     [ReportsController::class, 'pnl']);
+    Route::get('/staff',   [ReportsController::class, 'staff']);
 });
 
 // -------------------------------------------------
