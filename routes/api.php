@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
 use App\Http\Controllers\StaffController;
@@ -128,6 +129,20 @@ Route::middleware('auth:sanctum')->prefix('expenses')->group(function () {
     Route::get('/{id}',       [ExpenseController::class, 'show']);
     Route::put('/{id}',       [ExpenseController::class, 'update']);
     Route::delete('/{id}',    [ExpenseController::class, 'destroy']);
+});
+
+// -------------------------------------------------
+// Sale routes (owner + manager access)
+// summary/monthly registered before {id} to avoid wildcard match
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('sales')->group(function () {
+    Route::get('/summary', [SaleController::class, 'summary']);
+    Route::get('/monthly', [SaleController::class, 'monthly']);
+    Route::get('/',        [SaleController::class, 'index']);
+    Route::post('/',       [SaleController::class, 'store']);
+    Route::get('/{id}',    [SaleController::class, 'show']);
+    Route::put('/{id}',    [SaleController::class, 'update']);
+    Route::delete('/{id}', [SaleController::class, 'destroy']);
 });
 
 // -------------------------------------------------
