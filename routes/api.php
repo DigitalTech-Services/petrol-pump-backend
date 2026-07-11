@@ -8,6 +8,7 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -144,6 +145,20 @@ Route::middleware('auth:sanctum')->prefix('sales')->group(function () {
     Route::get('/{id}',    [SaleController::class, 'show']);
     Route::put('/{id}',    [SaleController::class, 'update']);
     Route::delete('/{id}', [SaleController::class, 'destroy']);
+});
+
+// -------------------------------------------------
+// Stock routes (owner + manager access)
+// summary/tankwise registered before {id} to avoid wildcard match
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('stock')->group(function () {
+    Route::get('/summary',  [StockController::class, 'summary']);
+    Route::get('/tankwise', [StockController::class, 'tankwise']);
+    Route::get('/',         [StockController::class, 'index']);
+    Route::post('/',        [StockController::class, 'store']);
+    Route::get('/{id}',     [StockController::class, 'show']);
+    Route::put('/{id}',     [StockController::class, 'update']);
+    Route::delete('/{id}',  [StockController::class, 'destroy']);
 });
 
 // -------------------------------------------------
