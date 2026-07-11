@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\MeterReadingController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
@@ -143,6 +144,20 @@ Route::middleware('auth:sanctum')->prefix('sales')->group(function () {
     Route::get('/{id}',    [SaleController::class, 'show']);
     Route::put('/{id}',    [SaleController::class, 'update']);
     Route::delete('/{id}', [SaleController::class, 'destroy']);
+});
+
+// -------------------------------------------------
+// Meter reading routes (owner + manager access)
+// summary/nozzles registered before {id} to avoid wildcard match
+// -------------------------------------------------
+Route::middleware('auth:sanctum')->prefix('meters')->group(function () {
+    Route::get('/summary', [MeterReadingController::class, 'summary']);
+    Route::get('/nozzles', [MeterReadingController::class, 'nozzles']);
+    Route::get('/',        [MeterReadingController::class, 'index']);
+    Route::post('/',       [MeterReadingController::class, 'store']);
+    Route::get('/{id}',    [MeterReadingController::class, 'show']);
+    Route::put('/{id}',    [MeterReadingController::class, 'update']);
+    Route::delete('/{id}', [MeterReadingController::class, 'destroy']);
 });
 
 // -------------------------------------------------
