@@ -22,10 +22,10 @@ class ExpenseController extends Controller
         'Other',
     ];
 
+    // Manager-only route (see role:sub_user middleware) — each manager's expenses are their own.
     private function owner(Request $request): User
     {
-        $user = $request->user();
-        return $user->type === 'sub_user' ? $user->parent : $user;
+        return $request->user();
     }
 
     // GET /expenses?month=2026-04&category=&search=

@@ -12,16 +12,10 @@ class StaffController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * Returns the pump-owner user ID regardless of whether the
-     * authenticated user is an owner (type='user') or a manager (type='sub_user').
-     */
+    // Manager-only route (see role:sub_user middleware) — each manager's staff list is their own.
     private function rootUserId(Request $request): int
     {
-        $user = $request->user();
-        return $user->type === 'sub_user'
-            ? (int) $user->parent_user_id
-            : $user->id;
+        return $request->user()->id;
     }
 
     // GET /staff

@@ -21,10 +21,10 @@ class StockController extends Controller
         'Speed' => 'speed_volume',
     ];
 
+    // Manager-only route (see role:sub_user middleware) — each manager's stock entries are their own.
     private function owner(Request $request): User
     {
-        $user = $request->user();
-        return $user->type === 'sub_user' ? $user->parent : $user;
+        return $request->user();
     }
 
     // date('Y-m-d') → sale volume for the matching fuel type, keyed by day of month

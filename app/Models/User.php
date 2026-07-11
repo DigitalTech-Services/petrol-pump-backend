@@ -49,4 +49,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(User::class, 'parent_user_id');
     }
+
+    /**
+     * User IDs whose data this account may view in aggregate.
+     * A manager (sub_user) only ever sees their own individual records.
+     * An owner sees their own account plus every manager they created,
+     * combined — this is what powers the owner's "all stats" view.
+     */
+    public function scopeUserIds(): array
+    {
+        if ($this->type === 'sub_user') {
+            return [$this->id];
+        }
+
+        return array_merge([$this->id], $this->subUsers()->pluck('id')->all());
+    }
 }

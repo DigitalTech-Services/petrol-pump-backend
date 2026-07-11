@@ -14,12 +14,10 @@ class StaffAttendanceController extends Controller
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
+    // Manager-only route (see role:sub_user middleware) — each manager's attendance records are their own.
     private function rootUserId(Request $request): int
     {
-        $user = $request->user();
-        return $user->type === 'sub_user'
-            ? (int) $user->parent_user_id
-            : $user->id;
+        return $request->user()->id;
     }
 
     /**

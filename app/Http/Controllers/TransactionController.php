@@ -12,10 +12,10 @@ class TransactionController extends Controller
 {
     use ApiResponse;
 
+    // Manager-only route (see role:sub_user middleware) — each manager's transactions are their own.
     private function owner(Request $request): User
     {
-        $user = $request->user();
-        return $user->type === 'sub_user' ? $user->parent : $user;
+        return $request->user();
     }
 
     // GET /transactions?month=YYYY-MM&type=&bank=&search=

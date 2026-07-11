@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
-use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,10 +11,11 @@ class DashboardController extends Controller
 {
     use ApiResponse;
 
-    private function owner(Request $request): User
+    // A manager only ever sees their own figures; an owner sees their own account
+    // plus every manager they created, combined — this is the "review all stats" view.
+    private function scopeUserIds(Request $request): array
     {
-        $user = $request->user();
-        return $user->type === 'sub_user' ? $user->parent : $user;
+        return $request->user()->scopeUserIds();
     }
 
     private function parseYearMonth(Request $request): array
@@ -32,9 +32,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $owner = $this->owner($request);
+            $userIds = $this->scopeUserIds($request);
 
-            $sales = Sale::where('user_id', $owner->id)
+            $sales = Sale::whereIn('user_id', $userIds)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get();
@@ -126,9 +126,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $owner = $this->owner($request);
+            $userIds = $this->scopeUserIds($request);
 
-            $sales = Sale::where('user_id', $owner->id)
+            $sales = Sale::whereIn('user_id', $userIds)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get();
@@ -175,9 +175,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $owner = $this->owner($request);
+            $userIds = $this->scopeUserIds($request);
 
-            $sales = Sale::where('user_id', $owner->id)
+            $sales = Sale::whereIn('user_id', $userIds)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get()
@@ -216,9 +216,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $owner = $this->owner($request);
+            $userIds = $this->scopeUserIds($request);
 
-            $sales = Sale::where('user_id', $owner->id)
+            $sales = Sale::whereIn('user_id', $userIds)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get()
@@ -249,9 +249,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $owner = $this->owner($request);
+            $userIds = $this->scopeUserIds($request);
 
-            $sales = Sale::where('user_id', $owner->id)
+            $sales = Sale::whereIn('user_id', $userIds)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get();

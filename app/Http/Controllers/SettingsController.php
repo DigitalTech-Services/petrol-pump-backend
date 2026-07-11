@@ -15,11 +15,10 @@ class SettingsController extends Controller
 {
     use ApiResponse;
 
-    // Resolve the owner regardless of whether the caller is an owner or a manager
+    // Manager-only route (see role:sub_user middleware) — each manager's settings are their own.
     private function owner(Request $request): User
     {
-        $user = $request->user();
-        return $user->type === 'sub_user' ? $user->parent : $user;
+        return $request->user();
     }
 
     // ──────────────────────────────────────────────────────────────────

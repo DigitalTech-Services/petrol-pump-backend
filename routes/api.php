@@ -76,18 +76,20 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/logout',              [UserController::class, 'logout']);
     Route::post('/profile',              [UserController::class, 'profile']);
 
-    // Sub-user management
-    Route::post('/sub-users',         [UserController::class, 'indexSubUsers']);
-    Route::post('/add-sub-user',      [UserController::class, 'storeSubUser']);
-    Route::post('/sub-users-details', [UserController::class, 'showSubUser']);
-    Route::post('/update-sub-user',   [UserController::class, 'updateSubUser']);
-    Route::post('/delete-sub-user',   [UserController::class, 'destroySubUser']);
+    // Sub-user (manager) management — owner only
+    Route::middleware('role:user')->group(function () {
+        Route::post('/sub-users',         [UserController::class, 'indexSubUsers']);
+        Route::post('/add-sub-user',      [UserController::class, 'storeSubUser']);
+        Route::post('/sub-users-details', [UserController::class, 'showSubUser']);
+        Route::post('/update-sub-user',   [UserController::class, 'updateSubUser']);
+        Route::post('/delete-sub-user',   [UserController::class, 'destroySubUser']);
+    });
 });
 
 // -------------------------------------------------
-// Settings routes (owner + manager access)
+// Settings routes (manager only — owner cannot access)
 // -------------------------------------------------
-Route::middleware('auth:sanctum')->prefix('settings')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('settings')->group(function () {
     // Station details
     Route::get('/',                    [SettingsController::class, 'getStation']);
     Route::put('/',                    [SettingsController::class, 'updateStation']);
@@ -108,7 +110,8 @@ Route::middleware('auth:sanctum')->prefix('settings')->group(function () {
 });
 
 // -------------------------------------------------
-// Dashboard routes (aggregates from sales + meters)
+// Dashboard routes (owner + manager access)
+// Manager sees only their own stats; owner sees all managers combined.
 // -------------------------------------------------
 Route::middleware('auth:sanctum')->prefix('dashboard')->group(function () {
     Route::get('/summary',       [DashboardController::class, 'summary']);      // consolidated — one DB query
@@ -120,10 +123,10 @@ Route::middleware('auth:sanctum')->prefix('dashboard')->group(function () {
 });
 
 // -------------------------------------------------
-// Expense routes (owner + manager access)
+// Expense routes (manager only — owner cannot access)
 // Fixed paths (categories, summary) registered before {id}
 // -------------------------------------------------
-Route::middleware('auth:sanctum')->prefix('expenses')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('expenses')->group(function () {
     Route::get('/categories', [ExpenseController::class, 'categories']);
     Route::get('/summary',    [ExpenseController::class, 'summary']);
     Route::get('/',           [ExpenseController::class, 'index']);
@@ -134,10 +137,10 @@ Route::middleware('auth:sanctum')->prefix('expenses')->group(function () {
 });
 
 // -------------------------------------------------
-// Sale routes (owner + manager access)
+// Sale routes (manager only — owner cannot access)
 // summary/monthly registered before {id} to avoid wildcard match
 // -------------------------------------------------
-Route::middleware('auth:sanctum')->prefix('sales')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('sales')->group(function () {
     Route::get('/summary', [SaleController::class, 'summary']);
     Route::get('/monthly', [SaleController::class, 'monthly']);
     Route::get('/',        [SaleController::class, 'index']);
@@ -148,10 +151,10 @@ Route::middleware('auth:sanctum')->prefix('sales')->group(function () {
 });
 
 // -------------------------------------------------
-// Stock routes (owner + manager access)
+// Stock routes (manager only — owner cannot access)
 // summary/tankwise registered before {id} to avoid wildcard match
 // -------------------------------------------------
-Route::middleware('auth:sanctum')->prefix('stock')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('stock')->group(function () {
     Route::get('/summary',  [StockController::class, 'summary']);
     Route::get('/tankwise', [StockController::class, 'tankwise']);
     Route::get('/',         [StockController::class, 'index']);
@@ -162,10 +165,10 @@ Route::middleware('auth:sanctum')->prefix('stock')->group(function () {
 });
 
 // -------------------------------------------------
-// Meter reading routes (owner + manager access)
+// Meter reading routes (manager only — owner cannot access)
 // summary/nozzles registered before {id} to avoid wildcard match
 // -------------------------------------------------
-Route::middleware('auth:sanctum')->prefix('meters')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('meters')->group(function () {
     Route::get('/summary', [MeterReadingController::class, 'summary']);
     Route::get('/nozzles', [MeterReadingController::class, 'nozzles']);
     Route::get('/',        [MeterReadingController::class, 'index']);
@@ -176,10 +179,10 @@ Route::middleware('auth:sanctum')->prefix('meters')->group(function () {
 });
 
 // -------------------------------------------------
-// Transaction routes (owner + manager access)
+// Transaction routes (manager only — owner cannot access)
 // summary registered before {id} to avoid wildcard match
 // -------------------------------------------------
-Route::middleware('auth:sanctum')->prefix('transactions')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('transactions')->group(function () {
     Route::get('/summary', [TransactionController::class, 'summary']);
     Route::get('/',        [TransactionController::class, 'index']);
     Route::post('/',       [TransactionController::class, 'store']);
@@ -189,12 +192,12 @@ Route::middleware('auth:sanctum')->prefix('transactions')->group(function () {
 });
 
 // -------------------------------------------------
-// Staff routes (owner + manager access)
+// Staff routes (manager only — owner cannot access)
 // ALL fixed paths must be registered BEFORE {id} routes
 // to avoid Laravel matching 'advances', 'attendance',
 // 'timesheet' as the {id} wildcard.
 // -------------------------------------------------
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user'])->group(function () {
 
     // ── Advances ──────────────────────────────────
     Route::get('/staff/advances',  [StaffController::class, 'getAdvances']);

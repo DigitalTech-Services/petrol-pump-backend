@@ -14,10 +14,10 @@ class SaleController extends Controller
 
     private const SHIFTS = ['Morning', 'Evening', 'Night', 'Full Day'];
 
+    // Manager-only route (see role:sub_user middleware) — each manager's sales are their own.
     private function owner(Request $request): User
     {
-        $user = $request->user();
-        return $user->type === 'sub_user' ? $user->parent : $user;
+        return $request->user();
     }
 
     // GET /sales?month=YYYY-MM&search=&sort=revenue|ms|expenses
