@@ -69,7 +69,7 @@ class ExpenseController extends Controller
                 'paid_by'   => 'sometimes|nullable|string|in:Cash,PhonePe,Card',
             ]);
 
-            $expense = Expense::create(array_merge($data, ['user_id' => $owner->id]));
+            $expense = Expense::create(array_merge($data, ['user_id' => $owner->id, 'station_id' => $owner->station_id]));
 
             return $this->success('Expense added.', ['expense' => $expense], 201);
         } catch (\Exception $e) {

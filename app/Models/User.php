@@ -16,6 +16,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'parent_user_id',
+        'station_id',
         'type',
         'business_name',
         'name',
@@ -49,6 +50,13 @@ class User extends Authenticatable
     public function subUsers(): HasMany
     {
         return $this->hasMany(User::class, 'parent_user_id');
+    }
+
+    // The station a manager (sub_user) currently runs. Null for owners and
+    // for managers not yet assigned to a station.
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(Station::class);
     }
 
     /**

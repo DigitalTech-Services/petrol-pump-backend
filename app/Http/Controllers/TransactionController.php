@@ -69,7 +69,7 @@ class TransactionController extends Controller
                 'remarks'    => 'sometimes|nullable|string|max:255',
             ]);
 
-            $tx = Transaction::create(array_merge($data, ['user_id' => $owner->id]));
+            $tx = Transaction::create(array_merge($data, ['user_id' => $owner->id, 'station_id' => $owner->station_id]));
 
             return $this->success('Transaction added.', ['transaction' => $tx], 201);
         } catch (\Exception $e) {

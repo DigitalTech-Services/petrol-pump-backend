@@ -93,7 +93,7 @@ class SaleController extends Controller
                 2
             );
 
-            $sale = Sale::create(array_merge($data, ['user_id' => $owner->id]));
+            $sale = Sale::create(array_merge($data, ['user_id' => $owner->id, 'station_id' => $owner->station_id]));
 
             return $this->success('Sale created.', ['sale' => $sale], 201);
         } catch (\Exception $e) {

@@ -51,6 +51,7 @@ class StaffController extends Controller
 
             $staff = Staff::create([
                 'user_id'      => $this->rootUserId($request),
+                'station_id'   => $request->user()->station_id,
                 'name'         => $data['name'],
                 'role'         => $data['role'],
                 'phone'        => $data['phone'] ?? null,
@@ -174,9 +175,10 @@ class StaffController extends Controller
             Staff::where('user_id', $userId)->findOrFail($data['staff_id']);
 
             $advance = StaffAdvance::create([
-                'staff_id' => $data['staff_id'],
-                'user_id'  => $userId,
-                'date'     => $data['date'],
+                'staff_id'   => $data['staff_id'],
+                'user_id'    => $userId,
+                'station_id' => $request->user()->station_id,
+                'date'       => $data['date'],
                 'amount'   => $data['amount'],
                 'reason'   => $data['reason'] ?? null,
             ]);

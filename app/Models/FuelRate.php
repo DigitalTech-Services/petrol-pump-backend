@@ -5,13 +5,14 @@ namespace App\Models;
 use App\Traits\HasAuditFields;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FuelRate extends Model
 {
     use HasFactory, HasAuditFields;
 
     protected $fillable = [
-        'user_id',
+        'station_id',
         'fuel_key',
         'name',
         'abbr',
@@ -27,4 +28,9 @@ class FuelRate extends Model
         'rate'           => 'float',
         'effective_date' => 'date:Y-m-d',
     ];
+
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(Station::class);
+    }
 }

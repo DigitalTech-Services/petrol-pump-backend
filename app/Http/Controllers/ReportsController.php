@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Sale;
 use App\Models\Staff;
+use App\Models\Station;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,10 +21,25 @@ class ReportsController extends Controller
     ];
 
     // A manager only ever sees their own figures; an owner sees their own account
-    // plus every manager they created, combined.
-    private function scopeUserIds(Request $request): array
+    // plus every manager they created, combined. An owner may narrow this to a
+    // single station via ?station_id= — see DashboardController::saleScope() for
+    // why this filters by the station_id column rather than by manager identity.
+    // Returns [column, values] to build a whereIn() query with.
+    private function scope(Request $request): array
     {
-        return $request->user()->scopeUserIds();
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
     }
 
     private function parseYearMonth(Request $request): array
@@ -43,11 +59,11 @@ class ReportsController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $userIds = $this->scopeUserIds($request);
+            [$col, $ids] = $this->scope($request);
 
-            $sales    = Sale::whereIn('user_id', $userIds)->whereYear('date', $year)->whereMonth('date', $month)->orderBy('date')->get();
-            $expenses = Expense::whereIn('user_id', $userIds)->whereYear('date', $year)->whereMonth('date', $month)->get();
-            $staff    = Staff::whereIn('user_id', $userIds)->withSum('advances', 'amount')->get();
+            $sales    = Sale::whereIn($col, $ids)->whereYear('date', $year)->whereMonth('date', $month)->orderBy('date')->get();
+            $expenses = Expense::whereIn($col, $ids)->whereYear('date', $year)->whereMonth('date', $month)->get();
+            $staff    = Staff::whereIn($col, $ids)->withSum('advances', 'amount')->get();
 
             $totalMs      = (float) $sales->sum('ms_volume');
             $totalHsd     = (float) $sales->sum('hsd_volume');
@@ -116,9 +132,9 @@ class ReportsController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $userIds = $this->scopeUserIds($request);
+            [$col, $ids] = $this->scope($request);
 
-            $sales = Sale::whereIn('user_id', $userIds)
+            $sales = Sale::whereIn($col, $ids)
                 ->whereYear('date', $year)->whereMonth('date', $month)
                 ->orderBy('date')->get();
 
@@ -175,10 +191,10 @@ class ReportsController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $userIds = $this->scopeUserIds($request);
+            [$col, $ids] = $this->scope($request);
 
-            $sales    = Sale::whereIn('user_id', $userIds)->whereYear('date', $year)->whereMonth('date', $month)->orderBy('date')->get();
-            $expenses = Expense::whereIn('user_id', $userIds)->whereYear('date', $year)->whereMonth('date', $month)->get();
+            $sales    = Sale::whereIn($col, $ids)->whereYear('date', $year)->whereMonth('date', $month)->orderBy('date')->get();
+            $expenses = Expense::whereIn($col, $ids)->whereYear('date', $year)->whereMonth('date', $month)->get();
 
             $daysInMonth  = $this->daysInMonth($year, $month);
             $salesIndexed = $sales->keyBy(fn($s) => $s->date->format('d'));
@@ -221,9 +237,9 @@ class ReportsController extends Controller
     public function staff(Request $request): JsonResponse
     {
         try {
-            $userIds = $this->scopeUserIds($request);
+            [$col, $ids] = $this->scope($request);
 
-            $staff = Staff::whereIn('user_id', $userIds)
+            $staff = Staff::whereIn($col, $ids)
                 ->withSum('advances', 'amount')
                 ->orderBy('id')
                 ->get()

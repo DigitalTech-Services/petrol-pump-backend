@@ -5,8 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FuelRate;
 use App\Models\Nozzle;
 use App\Models\NotificationPreference;
-use App\Models\StationSetting;
-use App\Models\User;
+use App\Models\Station;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,11 +14,14 @@ class SettingsController extends Controller
 {
     use ApiResponse;
 
-    // Manager-only route (see role:sub_user middleware) — each manager's settings are their own.
-    private function owner(Request $request): User
+    // Manager-only route (see role:sub_user middleware) — settings/fuel-rates/nozzles
+    // belong to the manager's assigned station, shared by whoever runs it.
+    private function station(Request $request): ?Station
     {
-        return $request->user();
+        return $request->user()->station;
     }
+
+    private const NO_STATION_MESSAGE = 'You are not assigned to a station yet — contact your owner.';
 
     // ──────────────────────────────────────────────────────────────────
     // STATION DETAILS
@@ -28,25 +30,15 @@ class SettingsController extends Controller
     public function getStation(Request $request): JsonResponse
     {
         try {
-            $owner   = $this->owner($request);
-            $setting = StationSetting::where('user_id', $owner->id)->first();
+            $station = $this->station($request);
 
-            if (!$setting) {
-                // Return sensible defaults derived from the owner account
-                $setting = [
-                    'station_name' => '',
-                    'dealer_code'  => '',
-                    'owner_name'   => $owner->name,
-                    'phone'        => $owner->contact ?? '',
-                    'address'      => '',
-                    'city'         => '',
-                    'state'        => '',
-                    'gst'          => '',
-                    'pan'          => '',
-                ];
+            if (!$station) {
+                return $this->success('Station settings fetched.', ['station' => null]);
             }
 
-            return $this->success('Station settings fetched.', ['station' => $setting]);
+            return $this->success('Station settings fetched.', [
+                'station' => $station->only(['id', 'name', 'dealer_code', 'address', 'city', 'state', 'gst', 'pan', 'phone']),
+            ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -55,26 +47,27 @@ class SettingsController extends Controller
     public function updateStation(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            $station = $this->station($request);
+            if (!$station) {
+                return $this->error(self::NO_STATION_MESSAGE, 422);
+            }
 
             $data = $request->validate([
-                'station_name' => 'sometimes|string|max:255',
-                'dealer_code'  => 'sometimes|string|max:255',
-                'owner_name'   => 'sometimes|string|max:255',
-                'phone'        => 'sometimes|string|max:20',
-                'address'      => 'sometimes|string',
-                'city'         => 'sometimes|string|max:100',
-                'state'        => 'sometimes|string|max:100',
-                'gst'          => 'sometimes|string|max:20',
-                'pan'          => 'sometimes|string|max:20',
+                'name'        => 'sometimes|string|max:255',
+                'dealer_code' => 'sometimes|string|max:255',
+                'address'     => 'sometimes|string',
+                'city'        => 'sometimes|string|max:100',
+                'state'       => 'sometimes|string|max:100',
+                'gst'         => 'sometimes|string|max:20',
+                'pan'         => 'sometimes|string|max:20',
+                'phone'       => 'sometimes|string|max:20',
             ]);
 
-            $setting = StationSetting::updateOrCreate(
-                ['user_id' => $owner->id],
-                $data
-            );
+            $station->update($data);
 
-            return $this->success('Station settings updated.', ['station' => $setting]);
+            return $this->success('Station settings updated.', [
+                'station' => $station->fresh()->only(['id', 'name', 'dealer_code', 'address', 'city', 'state', 'gst', 'pan', 'phone']),
+            ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -93,8 +86,11 @@ class SettingsController extends Controller
     public function getFuelRates(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
-            $rates = FuelRate::where('user_id', $owner->id)->get();
+            $station = $this->station($request);
+            if (!$station) {
+                return $this->error(self::NO_STATION_MESSAGE, 422);
+            }
+            $rates   = FuelRate::where('station_id', $station->id)->get();
 
             return $this->success('Fuel rates fetched.', [
                 'fuel_rates' => $rates->isEmpty() ? $this->defaultFuelRates : $rates,
@@ -107,7 +103,10 @@ class SettingsController extends Controller
     public function updateFuelRates(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            $station = $this->station($request);
+            if (!$station) {
+                return $this->error(self::NO_STATION_MESSAGE, 422);
+            }
 
             $data = $request->validate([
                 'rates'                  => 'required|array|min:1',
@@ -122,7 +121,7 @@ class SettingsController extends Controller
 
             foreach ($data['rates'] as $r) {
                 FuelRate::updateOrCreate(
-                    ['user_id' => $owner->id, 'fuel_key' => $r['fuel_key']],
+                    ['station_id' => $station->id, 'fuel_key' => $r['fuel_key']],
                     array_filter([
                         'name'           => $r['name']           ?? null,
                         'abbr'           => $r['abbr']           ?? null,
@@ -134,7 +133,7 @@ class SettingsController extends Controller
                 );
             }
 
-            $rates = FuelRate::where('user_id', $owner->id)->get();
+            $rates = FuelRate::where('station_id', $station->id)->get();
             return $this->success('Fuel rates updated.', ['fuel_rates' => $rates]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
@@ -161,8 +160,11 @@ class SettingsController extends Controller
     public function getNozzles(Request $request): JsonResponse
     {
         try {
-            $owner   = $this->owner($request);
-            $nozzles = Nozzle::where('user_id', $owner->id)->get();
+            $station = $this->station($request);
+            if (!$station) {
+                return $this->error(self::NO_STATION_MESSAGE, 422);
+            }
+            $nozzles = Nozzle::where('station_id', $station->id)->get();
 
             return $this->success('Nozzles fetched.', [
                 'nozzles' => $nozzles->isEmpty() ? $this->defaultNozzles : $nozzles,
@@ -175,7 +177,10 @@ class SettingsController extends Controller
     public function storeNozzle(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            $station = $this->station($request);
+            if (!$station) {
+                return $this->error(self::NO_STATION_MESSAGE, 422);
+            }
 
             $data = $request->validate([
                 'nozzle_id'    => 'required|string|max:20',
@@ -185,7 +190,7 @@ class SettingsController extends Controller
                 'last_reading' => 'sometimes|string|max:30',
             ]);
 
-            $nozzle = Nozzle::create(array_merge($data, ['user_id' => $owner->id]));
+            $nozzle = Nozzle::create(array_merge($data, ['station_id' => $station->id]));
 
             return $this->success('Nozzle added.', ['nozzle' => $nozzle], 201);
         } catch (\Exception $e) {
@@ -196,8 +201,11 @@ class SettingsController extends Controller
     public function updateNozzle(Request $request, int $id): JsonResponse
     {
         try {
-            $owner  = $this->owner($request);
-            $nozzle = Nozzle::where('user_id', $owner->id)->findOrFail($id);
+            $station = $this->station($request);
+            if (!$station) {
+                return $this->error(self::NO_STATION_MESSAGE, 422);
+            }
+            $nozzle  = Nozzle::where('station_id', $station->id)->findOrFail($id);
 
             $data = $request->validate([
                 'active'       => 'sometimes|boolean',
@@ -217,8 +225,11 @@ class SettingsController extends Controller
     public function destroyNozzle(Request $request, int $id): JsonResponse
     {
         try {
-            $owner  = $this->owner($request);
-            $nozzle = Nozzle::where('user_id', $owner->id)->findOrFail($id);
+            $station = $this->station($request);
+            if (!$station) {
+                return $this->error(self::NO_STATION_MESSAGE, 422);
+            }
+            $nozzle  = Nozzle::where('station_id', $station->id)->findOrFail($id);
             $nozzle->delete();
 
             return $this->success('Nozzle removed.');
@@ -228,7 +239,7 @@ class SettingsController extends Controller
     }
 
     // ──────────────────────────────────────────────────────────────────
-    // NOTIFICATION PREFERENCES
+    // NOTIFICATION PREFERENCES (personal — per manager login, not per station)
     // ──────────────────────────────────────────────────────────────────
 
     private array $defaultNotifications = [
@@ -242,7 +253,7 @@ class SettingsController extends Controller
     public function getNotifications(Request $request): JsonResponse
     {
         try {
-            $owner  = $this->owner($request);
+            $owner  = $request->user();
             $notifs = NotificationPreference::where('user_id', $owner->id)->get();
 
             return $this->success('Notification preferences fetched.', [
@@ -256,7 +267,7 @@ class SettingsController extends Controller
     public function updateNotifications(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            $owner = $request->user();
 
             $data = $request->validate([
                 'notifications'              => 'required|array|min:1',

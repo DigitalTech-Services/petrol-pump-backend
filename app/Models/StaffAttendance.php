@@ -18,6 +18,7 @@ class StaffAttendance extends Model
     protected $fillable = [
         'staff_id',
         'user_id',
+        'station_id',
         'date',
         'status',
         'in_time',
@@ -47,5 +48,10 @@ class StaffAttendance extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(Station::class);
     }
 }

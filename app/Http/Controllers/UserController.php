@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Station;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -22,9 +23,15 @@ class UserController extends Controller
     private function userFields(): array
     {
         return array_merge(
-            ['id', 'parent_user_id', 'type', 'name', 'email', 'contact', 'created_at', 'updated_at'],
+            ['id', 'parent_user_id', 'station_id', 'type', 'name', 'email', 'contact', 'created_at', 'updated_at'],
             $this->auditFields
         );
+    }
+
+    // Validates that $stationId belongs to $owner, returning the Station or failing with a 404.
+    private function ownedStation(User $owner, int $stationId): Station
+    {
+        return Station::where('user_id', $owner->id)->findOrFail($stationId);
     }
 
     // Owner has their own business_name; a manager inherits the owner's.
@@ -33,6 +40,15 @@ class UserController extends Controller
         return array_merge(
             $user->only($this->userFields()),
             ['business_name' => $user->resolveBusinessName()]
+        );
+    }
+
+    // Includes the assigned station's name alongside the manager's fields.
+    private function presentSubUser(User $subUser): array
+    {
+        return array_merge(
+            $subUser->only($this->userFields()),
+            ['station' => $subUser->station?->only(['id', 'name'])]
         );
     }
 
@@ -112,6 +128,7 @@ class UserController extends Controller
         try {
             $subUsers = $request->user()
                 ->subUsers()
+                ->with('station:id,name')
                 ->select($this->userFields())
                 ->get();
 
@@ -133,10 +150,20 @@ class UserController extends Controller
                 'email' => 'required|email|unique:users,email',
                 'contact' => 'required|unique:users,contact',
                 'password' => 'required|string|min:8',
+                'station_id' => 'sometimes|nullable|integer',
             ]);
+
+            if (!empty($data['station_id'])) {
+                $this->ownedStation($request->user(), $data['station_id']);
+
+                // A station only ever has one active manager — bumping a new manager
+                // onto it unassigns whoever was previously running it.
+                User::where('station_id', $data['station_id'])->update(['station_id' => null]);
+            }
 
             $subUser = User::create([
                 'parent_user_id' => $request->user()->id,
+                'station_id' => $data['station_id'] ?? null,
                 'type' => 'sub_user',
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -144,7 +171,7 @@ class UserController extends Controller
                 'password' => Hash::make($data['password']),
             ]);
 
-            return $this->success('User created!', ['sub_user' => $subUser->only($this->userFields())], 201);
+            return $this->success('User created!', ['sub_user' => $this->presentSubUser($subUser)], 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -156,9 +183,9 @@ class UserController extends Controller
             $data = $request->validate([
                 'user_id' => 'required|int',
             ]);
-            $subUser = $request->user()->subUsers()->findOrFail($data['user_id']);
+            $subUser = $request->user()->subUsers()->with('station:id,name')->findOrFail($data['user_id']);
 
-            return $this->success('Users fetched!', ['sub_user' => $subUser->only($this->userFields())]);
+            return $this->success('Users fetched!', ['sub_user' => $this->presentSubUser($subUser)]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -175,11 +202,22 @@ class UserController extends Controller
             $data = $request->validate([
                 'name' => 'sometimes|string|max:255',
                 'email' => "sometimes|email|unique:users,email,{$subUser->id}",
+                'station_id' => 'sometimes|nullable|integer',
             ]);
+
+            if (array_key_exists('station_id', $data) && $data['station_id'] !== null) {
+                $this->ownedStation($request->user(), $data['station_id']);
+
+                // A station only ever has one active manager — bumping this manager
+                // onto it unassigns whoever else was previously running it.
+                User::where('station_id', $data['station_id'])
+                    ->where('id', '!=', $subUser->id)
+                    ->update(['station_id' => null]);
+            }
 
             $subUser->update($data);
 
-            return $this->success('User account updated!', ['sub_user' => $subUser->fresh()->only($this->userFields())]);
+            return $this->success('User account updated!', ['sub_user' => $this->presentSubUser($subUser->fresh('station'))]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }

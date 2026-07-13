@@ -17,6 +17,7 @@ class Expense extends Model
 
     protected $fillable = [
         'user_id',
+        'station_id',
         'date',
         'amount',
         'category',
@@ -40,5 +41,10 @@ class Expense extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(Station::class);
     }
 }

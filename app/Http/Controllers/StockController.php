@@ -114,7 +114,7 @@ class StockController extends Controller
                 return $this->error('A stock entry for this date and fuel type already exists.', 422);
             }
 
-            $entry = StockEntry::create(array_merge($data, ['user_id' => $owner->id]));
+            $entry = StockEntry::create(array_merge($data, ['user_id' => $owner->id, 'station_id' => $owner->station_id]));
 
             $saleVolumes = $this->saleVolumesByDay($owner->id, substr($data['date'], 0, 7), $data['fuel_type']);
 

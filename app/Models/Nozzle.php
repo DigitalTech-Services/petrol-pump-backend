@@ -5,13 +5,14 @@ namespace App\Models;
 use App\Traits\HasAuditFields;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Nozzle extends Model
 {
     use HasFactory, HasAuditFields;
 
     protected $fillable = [
-        'user_id',
+        'station_id',
         'nozzle_id',
         'pump',
         'fuel',
@@ -24,4 +25,9 @@ class Nozzle extends Model
     protected $casts = [
         'active' => 'boolean',
     ];
+
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(Station::class);
+    }
 }

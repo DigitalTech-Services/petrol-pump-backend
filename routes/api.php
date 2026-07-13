@@ -9,6 +9,7 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffAttendanceController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\StationController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
@@ -86,6 +87,16 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
         Route::post('/update-sub-user',   [UserController::class, 'updateSubUser']);
         Route::post('/delete-sub-user',   [UserController::class, 'destroySubUser']);
     });
+});
+
+// -------------------------------------------------
+// Station routes (owner only — a manager cannot manage stations)
+// -------------------------------------------------
+Route::middleware(['auth:sanctum', 'role:user'])->prefix('stations')->group(function () {
+    Route::get('/',        [StationController::class, 'index']);
+    Route::post('/',       [StationController::class, 'store']);
+    Route::put('/{id}',    [StationController::class, 'update']);
+    Route::delete('/{id}', [StationController::class, 'destroy']);
 });
 
 // -------------------------------------------------

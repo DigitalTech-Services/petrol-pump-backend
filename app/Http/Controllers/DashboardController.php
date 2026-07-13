@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
+use App\Models\Station;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,9 +14,26 @@ class DashboardController extends Controller
 
     // A manager only ever sees their own figures; an owner sees their own account
     // plus every manager they created, combined — this is the "review all stats" view.
-    private function scopeUserIds(Request $request): array
+    // An owner may narrow this to a single station via ?station_id=, which switches
+    // to filtering Sale by its own station_id column instead — this keeps a station's
+    // history intact even if its manager is later reassigned, unlike filtering by
+    // whichever manager currently happens to run it.
+    // Returns [column, values] to build a whereIn() query with.
+    private function saleScope(Request $request): array
     {
-        return $request->user()->scopeUserIds();
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
     }
 
     private function parseYearMonth(Request $request): array
@@ -32,9 +50,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $userIds = $this->scopeUserIds($request);
+            [$scopeColumn, $scopeValues] = $this->saleScope($request);
 
-            $sales = Sale::whereIn('user_id', $userIds)
+            $sales = Sale::whereIn($scopeColumn, $scopeValues)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get();
@@ -126,9 +144,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $userIds = $this->scopeUserIds($request);
+            [$scopeColumn, $scopeValues] = $this->saleScope($request);
 
-            $sales = Sale::whereIn('user_id', $userIds)
+            $sales = Sale::whereIn($scopeColumn, $scopeValues)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get();
@@ -175,9 +193,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $userIds = $this->scopeUserIds($request);
+            [$scopeColumn, $scopeValues] = $this->saleScope($request);
 
-            $sales = Sale::whereIn('user_id', $userIds)
+            $sales = Sale::whereIn($scopeColumn, $scopeValues)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get()
@@ -216,9 +234,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $userIds = $this->scopeUserIds($request);
+            [$scopeColumn, $scopeValues] = $this->saleScope($request);
 
-            $sales = Sale::whereIn('user_id', $userIds)
+            $sales = Sale::whereIn($scopeColumn, $scopeValues)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get()
@@ -249,9 +267,9 @@ class DashboardController extends Controller
     {
         try {
             [$year, $month] = $this->parseYearMonth($request);
-            $userIds = $this->scopeUserIds($request);
+            [$scopeColumn, $scopeValues] = $this->saleScope($request);
 
-            $sales = Sale::whereIn('user_id', $userIds)
+            $sales = Sale::whereIn($scopeColumn, $scopeValues)
                 ->whereYear('date', $year)
                 ->whereMonth('date', $month)
                 ->get();

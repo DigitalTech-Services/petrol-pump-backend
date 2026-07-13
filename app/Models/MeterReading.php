@@ -16,6 +16,7 @@ class MeterReading extends Model
 
     protected $fillable = [
         'user_id',
+        'station_id',
         'date',
         'total_used',
         'notes',
@@ -31,6 +32,11 @@ class MeterReading extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(Station::class);
     }
 
     public function nozzleReadings(): HasMany

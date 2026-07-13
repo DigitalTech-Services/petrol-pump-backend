@@ -73,6 +73,7 @@ class MeterReadingController extends Controller
 
                 $reading = MeterReading::create([
                     'user_id'    => $owner->id,
+                    'station_id' => $owner->station_id,
                     'date'       => $data['date'],
                     'total_used' => round($totalUsed, 2),
                     'notes'      => $data['notes'] ?? null,
@@ -178,7 +179,7 @@ class MeterReadingController extends Controller
         try {
             $owner = $this->owner($request);
 
-            $query = Nozzle::where('user_id', $owner->id)->where('active', true);
+            $query = Nozzle::where('station_id', $owner->station_id)->where('active', true);
 
             if ($fuel = $request->query('fuel_type')) {
                 $query->where('fuel', $fuel);

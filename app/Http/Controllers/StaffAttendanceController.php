@@ -111,6 +111,7 @@ class StaffAttendanceController extends Controller
                 ['staff_id' => $data['staff_id'], 'date' => $data['date']],
                 [
                     'user_id'     => $userId,
+                    'station_id'  => $request->user()->station_id,
                     'status'      => $data['status'],
                     'in_time'     => $data['in_time'] ?? null,
                     'out_time'    => $data['out_time'] ?? null,
@@ -156,6 +157,7 @@ class StaffAttendanceController extends Controller
                     ['staff_id' => $rec['staff_id'], 'date' => $data['date']],
                     [
                         'user_id'     => $userId,
+                        'station_id'  => $request->user()->station_id,
                         'status'      => $rec['status'],
                         'in_time'     => $rec['in_time'] ?? null,
                         'out_time'    => $rec['out_time'] ?? null,
