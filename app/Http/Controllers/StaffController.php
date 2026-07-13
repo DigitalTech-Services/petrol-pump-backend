@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use App\Models\StaffAdvance;
+use App\Models\Station;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,17 +13,37 @@ class StaffController extends Controller
 {
     use ApiResponse;
 
-    // Manager-only route (see role:sub_user middleware) — each manager's staff list is their own.
+    // Write routes (see role:sub_user middleware) — each manager's staff list is their own.
     private function rootUserId(Request $request): int
     {
         return $request->user()->id;
+    }
+
+    // Read routes (role:user,sub_user) — same pattern as DashboardController::saleScope().
+    private function scope(Request $request): array
+    {
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
     }
 
     // GET /staff
     public function index(Request $request): JsonResponse
     {
         try {
-            $staff = Staff::where('user_id', $this->rootUserId($request))
+            [$col, $ids] = $this->scope($request);
+
+            $staff = Staff::whereIn($col, $ids)
                 ->withSum('advances', 'amount')
                 ->orderBy('id')
                 ->get()
@@ -74,7 +95,8 @@ class StaffController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $staff = Staff::where('user_id', $this->rootUserId($request))
+            [$col, $ids] = $this->scope($request);
+            $staff = Staff::whereIn($col, $ids)
                 ->withSum('advances', 'amount')
                 ->findOrFail($id);
 
@@ -127,9 +149,9 @@ class StaffController extends Controller
     public function getAdvances(Request $request): JsonResponse
     {
         try {
-            $userId = $this->rootUserId($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = StaffAdvance::where('user_id', $userId)
+            $query = StaffAdvance::whereIn($col, $ids)
                 ->with('staff:id,name')
                 ->orderBy('date', 'asc');
 

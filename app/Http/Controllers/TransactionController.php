@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Station;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Traits\ApiResponse;
@@ -12,19 +13,37 @@ class TransactionController extends Controller
 {
     use ApiResponse;
 
-    // Manager-only route (see role:sub_user middleware) — each manager's transactions are their own.
+    // Write routes (see role:sub_user middleware) — each manager's transactions are their own.
     private function owner(Request $request): User
     {
         return $request->user();
+    }
+
+    // Read routes (role:user,sub_user) — same pattern as DashboardController::saleScope().
+    private function scope(Request $request): array
+    {
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
     }
 
     // GET /transactions?month=YYYY-MM&type=&bank=&search=
     public function index(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = Transaction::where('user_id', $owner->id)
+            $query = Transaction::whereIn($col, $ids)
                 ->orderBy('date', 'asc')
                 ->orderBy('id', 'asc');
 
@@ -81,8 +100,8 @@ class TransactionController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
-            $tx    = Transaction::where('user_id', $owner->id)->findOrFail($id);
+            [$col, $ids] = $this->scope($request);
+            $tx = Transaction::whereIn($col, $ids)->findOrFail($id);
 
             return $this->success('Transaction fetched.', ['transaction' => $tx]);
         } catch (\Exception $e) {
@@ -132,9 +151,9 @@ class TransactionController extends Controller
     public function summary(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = Transaction::where('user_id', $owner->id);
+            $query = Transaction::whereIn($col, $ids);
 
             if ($month = $request->query('month')) {
                 $query->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month]);

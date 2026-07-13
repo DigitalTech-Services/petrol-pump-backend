@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
+use App\Models\Station;
 use App\Models\StockEntry;
 use App\Models\User;
 use App\Traits\ApiResponse;
@@ -21,18 +22,36 @@ class StockController extends Controller
         'Speed' => 'speed_volume',
     ];
 
-    // Manager-only route (see role:sub_user middleware) — each manager's stock entries are their own.
+    // Write routes (see role:sub_user middleware) — each manager's stock entries are their own.
     private function owner(Request $request): User
     {
         return $request->user();
     }
 
+    // Read routes (role:user,sub_user) — same pattern as DashboardController::saleScope().
+    private function scope(Request $request): array
+    {
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
+    }
+
     // date('Y-m-d') → sale volume for the matching fuel type, keyed by day of month
-    private function saleVolumesByDay(int $ownerId, string $month, string $fuelType)
+    private function saleVolumesByDay(string $col, array $ids, string $month, string $fuelType)
     {
         $column = self::SALE_COLUMN[$fuelType];
 
-        return Sale::where('user_id', $ownerId)
+        return Sale::whereIn($col, $ids)
             ->whereYear('date', substr($month, 0, 4))
             ->whereMonth('date', substr($month, 5, 2))
             ->get()
@@ -65,7 +84,7 @@ class StockController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $owner    = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
             $fuelType = $request->query('fuel_type', 'MS');
             $month    = $request->query('month', date('Y-m'));
 
@@ -73,14 +92,14 @@ class StockController extends Controller
                 return $this->error('Invalid fuel_type.', 422);
             }
 
-            $entries = StockEntry::where('user_id', $owner->id)
+            $entries = StockEntry::whereIn($col, $ids)
                 ->where('fuel_type', $fuelType)
                 ->whereYear('date', substr($month, 0, 4))
                 ->whereMonth('date', substr($month, 5, 2))
                 ->orderBy('date', 'asc')
                 ->get();
 
-            $saleVolumes = $this->saleVolumesByDay($owner->id, $month, $fuelType);
+            $saleVolumes = $this->saleVolumesByDay($col, $ids, $month, $fuelType);
             $rows = $entries->map(fn($e) => $this->present($e, $saleVolumes))->values();
 
             return $this->success('Stock entries fetched.', ['entries' => $rows]);
@@ -116,7 +135,7 @@ class StockController extends Controller
 
             $entry = StockEntry::create(array_merge($data, ['user_id' => $owner->id, 'station_id' => $owner->station_id]));
 
-            $saleVolumes = $this->saleVolumesByDay($owner->id, substr($data['date'], 0, 7), $data['fuel_type']);
+            $saleVolumes = $this->saleVolumesByDay('user_id', [$owner->id], substr($data['date'], 0, 7), $data['fuel_type']);
 
             return $this->success('Stock entry added.', ['entry' => $this->present($entry, $saleVolumes)], 201);
         } catch (\Exception $e) {
@@ -128,10 +147,10 @@ class StockController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
-            $entry = StockEntry::where('user_id', $owner->id)->findOrFail($id);
+            [$col, $ids] = $this->scope($request);
+            $entry = StockEntry::whereIn($col, $ids)->findOrFail($id);
 
-            $saleVolumes = $this->saleVolumesByDay($owner->id, $entry->date->format('Y-m'), $entry->fuel_type);
+            $saleVolumes = $this->saleVolumesByDay($col, $ids, $entry->date->format('Y-m'), $entry->fuel_type);
 
             return $this->success('Stock entry fetched.', ['entry' => $this->present($entry, $saleVolumes)]);
         } catch (\Exception $e) {
@@ -159,7 +178,7 @@ class StockController extends Controller
             $entry->update($data);
             $entry = $entry->fresh();
 
-            $saleVolumes = $this->saleVolumesByDay($owner->id, $entry->date->format('Y-m'), $entry->fuel_type);
+            $saleVolumes = $this->saleVolumesByDay('user_id', [$owner->id], $entry->date->format('Y-m'), $entry->fuel_type);
 
             return $this->success('Stock entry updated.', ['entry' => $this->present($entry, $saleVolumes)]);
         } catch (\Exception $e) {
@@ -185,7 +204,7 @@ class StockController extends Controller
     public function summary(Request $request): JsonResponse
     {
         try {
-            $owner    = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
             $fuelType = $request->query('fuel_type', 'MS');
             $month    = $request->query('month', date('Y-m'));
 
@@ -193,7 +212,7 @@ class StockController extends Controller
                 return $this->error('Invalid fuel_type.', 422);
             }
 
-            $entries = StockEntry::where('user_id', $owner->id)
+            $entries = StockEntry::whereIn($col, $ids)
                 ->where('fuel_type', $fuelType)
                 ->whereYear('date', substr($month, 0, 4))
                 ->whereMonth('date', substr($month, 5, 2))
@@ -209,7 +228,7 @@ class StockController extends Controller
                 ]);
             }
 
-            $saleVolumes = $this->saleVolumesByDay($owner->id, $month, $fuelType);
+            $saleVolumes = $this->saleVolumesByDay($col, $ids, $month, $fuelType);
             $rows        = $entries->map(fn($e) => $this->present($e, $saleVolumes));
 
             return $this->success('Summary fetched.', [
@@ -230,13 +249,13 @@ class StockController extends Controller
     public function tankwise(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
             $month = $request->query('month', date('Y-m'));
 
             $result = [];
 
             foreach (self::FUEL_TYPES as $fuelType) {
-                $entries = StockEntry::where('user_id', $owner->id)
+                $entries = StockEntry::whereIn($col, $ids)
                     ->where('fuel_type', $fuelType)
                     ->whereYear('date', substr($month, 0, 4))
                     ->whereMonth('date', substr($month, 5, 2))
@@ -251,7 +270,7 @@ class StockController extends Controller
                     continue;
                 }
 
-                $saleVolumes = $this->saleVolumesByDay($owner->id, $month, $fuelType);
+                $saleVolumes = $this->saleVolumesByDay($col, $ids, $month, $fuelType);
                 $rows        = $entries->map(fn($e) => $this->present($e, $saleVolumes));
 
                 $result[$fuelType] = [

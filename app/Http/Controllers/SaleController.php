@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
+use App\Models\Station;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -14,19 +15,39 @@ class SaleController extends Controller
 
     private const SHIFTS = ['Morning', 'Evening', 'Night', 'Full Day'];
 
-    // Manager-only route (see role:sub_user middleware) — each manager's sales are their own.
+    // Write routes (see role:sub_user middleware) — each manager's sales are their own.
     private function owner(Request $request): User
     {
         return $request->user();
+    }
+
+    // Read routes (role:user,sub_user) — a manager only ever sees their own sales;
+    // an owner sees every manager they created combined, or narrows to one station
+    // via ?station_id= — same pattern as DashboardController::saleScope().
+    private function scope(Request $request): array
+    {
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
     }
 
     // GET /sales?month=YYYY-MM&search=&sort=revenue|ms|expenses
     public function index(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = Sale::where('user_id', $owner->id)->orderBy('date', 'asc')->orderBy('id', 'asc');
+            $query = Sale::whereIn($col, $ids)->orderBy('date', 'asc')->orderBy('id', 'asc');
 
             if ($month = $request->query('month')) {
                 $query->whereYear('date', substr($month, 0, 4))
@@ -105,8 +126,8 @@ class SaleController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
-            $sale  = Sale::where('user_id', $owner->id)->findOrFail($id);
+            [$col, $ids] = $this->scope($request);
+            $sale = Sale::whereIn($col, $ids)->findOrFail($id);
 
             return $this->success('Sale fetched.', ['sale' => $sale]);
         } catch (\Exception $e) {
@@ -181,9 +202,9 @@ class SaleController extends Controller
     public function summary(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = Sale::where('user_id', $owner->id);
+            $query = Sale::whereIn($col, $ids);
 
             if ($month = $request->query('month')) {
                 $query->whereYear('date', substr($month, 0, 4))
@@ -221,10 +242,10 @@ class SaleController extends Controller
     public function monthly(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
-            $year  = $request->query('year', date('Y'));
+            [$col, $ids] = $this->scope($request);
+            $year = $request->query('year', date('Y'));
 
-            $sales = Sale::where('user_id', $owner->id)
+            $sales = Sale::whereIn($col, $ids)
                 ->whereYear('date', $year)
                 ->get();
 

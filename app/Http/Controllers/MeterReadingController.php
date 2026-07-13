@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MeterReading;
 use App\Models\MeterReadingNozzle;
 use App\Models\Nozzle;
+use App\Models\Station;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -15,20 +16,38 @@ class MeterReadingController extends Controller
 {
     use ApiResponse;
 
-    // Manager-only route (see role:sub_user middleware) — each manager's readings are their own.
+    // Write routes (see role:sub_user middleware) — each manager's readings are their own.
     private function owner(Request $request): User
     {
         return $request->user();
+    }
+
+    // Read routes (role:user,sub_user) — same pattern as DashboardController::saleScope().
+    private function scope(Request $request): array
+    {
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
     }
 
     // GET /meters?month=YYYY-MM&fuel_type=MS
     public function index(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
             $query = MeterReading::with('nozzleReadings')
-                ->where('user_id', $owner->id)
+                ->whereIn($col, $ids)
                 ->orderBy('date', 'asc');
 
             if ($month = $request->query('month')) {
@@ -102,9 +121,9 @@ class MeterReadingController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $owner   = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
             $reading = MeterReading::with('nozzleReadings')
-                ->where('user_id', $owner->id)
+                ->whereIn($col, $ids)
                 ->findOrFail($id);
 
             return $this->success('Meter reading fetched.', ['reading' => $reading]);
@@ -177,9 +196,15 @@ class MeterReadingController extends Controller
     public function nozzles(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = Nozzle::where('station_id', $owner->station_id)->where('active', true);
+            // Nozzles are keyed by station, not user — a specific station_id resolves directly;
+            // the "all stations" aggregate resolves to every scoped manager's assigned station.
+            $stationIds = $col === 'station_id'
+                ? $ids
+                : User::whereIn('id', $ids)->whereNotNull('station_id')->pluck('station_id')->all();
+
+            $query = Nozzle::whereIn('station_id', $stationIds)->where('active', true);
 
             if ($fuel = $request->query('fuel_type')) {
                 $query->where('fuel', $fuel);
@@ -195,9 +220,9 @@ class MeterReadingController extends Controller
     public function summary(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = MeterReading::with('nozzleReadings')->where('user_id', $owner->id);
+            $query = MeterReading::with('nozzleReadings')->whereIn($col, $ids);
 
             if ($month = $request->query('month')) {
                 $query->whereYear('date', substr($month, 0, 4))

@@ -14,11 +14,26 @@ class SettingsController extends Controller
 {
     use ApiResponse;
 
-    // Manager-only route (see role:sub_user middleware) — settings/fuel-rates/nozzles
-    // belong to the manager's assigned station, shared by whoever runs it.
+    // Settings/fuel-rates/nozzles belong to a single station, shared by whoever runs it.
+    // A manager always resolves their own assigned station. An owner (read-only, see
+    // role:user,sub_user on the GET routes) must pick a specific station via
+    // ?station_id= — there's no "all stations" aggregate for single-station config.
     private function station(Request $request): ?Station
     {
-        return $request->user()->station;
+        $user = $request->user();
+
+        if ($user->type === 'user') {
+            $stationId = $request->query('station_id');
+            if ($stationId === null || $stationId === '') {
+                return null;
+            }
+
+            return Station::where('id', (int) $stationId)
+                ->where('user_id', $user->id)
+                ->first();
+        }
+
+        return $user->station;
     }
 
     private const NO_STATION_MESSAGE = 'You are not assigned to a station yet — contact your owner.';

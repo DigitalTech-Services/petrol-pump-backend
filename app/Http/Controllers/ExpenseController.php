@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Expense;
+use App\Models\Station;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -22,19 +23,37 @@ class ExpenseController extends Controller
         'Other',
     ];
 
-    // Manager-only route (see role:sub_user middleware) — each manager's expenses are their own.
+    // Write routes (see role:sub_user middleware) — each manager's expenses are their own.
     private function owner(Request $request): User
     {
         return $request->user();
+    }
+
+    // Read routes (role:user,sub_user) — same pattern as DashboardController::saleScope().
+    private function scope(Request $request): array
+    {
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
     }
 
     // GET /expenses?month=2026-04&category=&search=
     public function index(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = Expense::where('user_id', $owner->id)->orderBy('date', 'asc')->orderBy('id', 'asc');
+            $query = Expense::whereIn($col, $ids)->orderBy('date', 'asc')->orderBy('id', 'asc');
 
             if ($month = $request->query('month')) {
                 $query->whereYear('date', substr($month, 0, 4))
@@ -81,8 +100,8 @@ class ExpenseController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $owner   = $this->owner($request);
-            $expense = Expense::where('user_id', $owner->id)->findOrFail($id);
+            [$col, $ids] = $this->scope($request);
+            $expense = Expense::whereIn($col, $ids)->findOrFail($id);
 
             return $this->success('Expense fetched.', ['expense' => $expense]);
         } catch (\Exception $e) {
@@ -131,9 +150,9 @@ class ExpenseController extends Controller
     public function summary(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = Expense::where('user_id', $owner->id);
+            $query = Expense::whereIn($col, $ids);
 
             if ($month = $request->query('month')) {
                 $query->whereYear('date', substr($month, 0, 4))

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use App\Models\StaffAttendance;
+use App\Models\Station;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,10 +15,28 @@ class StaffAttendanceController extends Controller
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    // Manager-only route (see role:sub_user middleware) — each manager's attendance records are their own.
+    // Write routes (see role:sub_user middleware) — each manager's attendance records are their own.
     private function rootUserId(Request $request): int
     {
         return $request->user()->id;
+    }
+
+    // Read routes (role:user,sub_user) — same pattern as DashboardController::saleScope().
+    private function scope(Request $request): array
+    {
+        $stationId = $request->query('station_id');
+
+        if ($stationId !== null && $stationId !== '' && $request->user()->type === 'user') {
+            $owns = Station::where('id', (int) $stationId)
+                ->where('user_id', $request->user()->id)
+                ->exists();
+
+            if ($owns) {
+                return ['station_id', [(int) $stationId]];
+            }
+        }
+
+        return ['user_id', $request->user()->scopeUserIds()];
     }
 
     /**
@@ -63,9 +82,9 @@ class StaffAttendanceController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $userId = $this->rootUserId($request);
+            [$col, $ids] = $this->scope($request);
 
-            $query = StaffAttendance::where('user_id', $userId)
+            $query = StaffAttendance::whereIn($col, $ids)
                 ->with('staff:id,name,role,rate_per_day')
                 ->orderBy('date')
                 ->orderBy('staff_id');
@@ -183,7 +202,8 @@ class StaffAttendanceController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $record = StaffAttendance::where('user_id', $this->rootUserId($request))
+            [$col, $ids] = $this->scope($request);
+            $record = StaffAttendance::whereIn($col, $ids)
                 ->with('staff:id,name,role,rate_per_day')
                 ->findOrFail($id);
 
@@ -241,10 +261,10 @@ class StaffAttendanceController extends Controller
     public function timesheet(Request $request): JsonResponse
     {
         try {
-            $userId = $this->rootUserId($request);
-            $month  = $request->input('month', now()->format('Y-m')); // e.g. 2026-06
+            [$col, $ids] = $this->scope($request);
+            $month = $request->input('month', now()->format('Y-m')); // e.g. 2026-06
 
-            $staff = Staff::where('user_id', $userId)
+            $staff = Staff::whereIn($col, $ids)
                 ->withSum(['advances' => fn($q) => $q->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])], 'amount')
                 ->with(['attendance' => function ($q) use ($month) {
                     $q->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month]);
