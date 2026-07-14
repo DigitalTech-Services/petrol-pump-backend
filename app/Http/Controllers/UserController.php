@@ -72,7 +72,7 @@ class UserController extends Controller
 
             return $this->success('Login successful', [
                 'token' => $token,
-                'user' => $this->presentUser($user),
+                'user' => $user->type === 'sub_user' ? $this->presentSubUser($user) : $this->presentUser($user),
             ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
