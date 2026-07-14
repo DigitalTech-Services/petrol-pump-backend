@@ -159,19 +159,6 @@ class SettingsController extends Controller
     // NOZZLES
     // ──────────────────────────────────────────────────────────────────
 
-    private array $defaultNozzles = [
-        ['nozzle_id' => 'MS-01',  'pump' => 'Pump 1', 'fuel' => 'MS',    'active' => true,  'last_reading' => '265,422.57'],
-        ['nozzle_id' => 'MS-02',  'pump' => 'Pump 1', 'fuel' => 'MS',    'active' => true,  'last_reading' => '265,422.57'],
-        ['nozzle_id' => 'MS-03',  'pump' => 'Pump 2', 'fuel' => 'MS',    'active' => true,  'last_reading' => '354,926.72'],
-        ['nozzle_id' => 'MS-04',  'pump' => 'Pump 2', 'fuel' => 'MS',    'active' => true,  'last_reading' => '354,926.72'],
-        ['nozzle_id' => 'MS-05',  'pump' => 'Pump 3', 'fuel' => 'MS',    'active' => true,  'last_reading' => '101,181.38'],
-        ['nozzle_id' => 'MS-06',  'pump' => 'Pump 3', 'fuel' => 'MS',    'active' => false, 'last_reading' => '101,181.38'],
-        ['nozzle_id' => 'HSD-01', 'pump' => 'Pump 4', 'fuel' => 'HSD',   'active' => true,  'last_reading' => '48,235.60'],
-        ['nozzle_id' => 'HSD-02', 'pump' => 'Pump 4', 'fuel' => 'HSD',   'active' => true,  'last_reading' => '48,235.60'],
-        ['nozzle_id' => 'SP-01',  'pump' => 'Pump 5', 'fuel' => 'Speed', 'active' => true,  'last_reading' => '12,450.22'],
-        ['nozzle_id' => 'SP-02',  'pump' => 'Pump 5', 'fuel' => 'Speed', 'active' => true,  'last_reading' => '12,450.22'],
-    ];
-
     public function getNozzles(Request $request): JsonResponse
     {
         try {
@@ -181,9 +168,7 @@ class SettingsController extends Controller
             }
             $nozzles = Nozzle::where('station_id', $station->id)->get();
 
-            return $this->success('Nozzles fetched.', [
-                'nozzles' => $nozzles->isEmpty() ? $this->defaultNozzles : $nozzles,
-            ]);
+            return $this->success('Nozzles fetched.', ['nozzles' => $nozzles]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
