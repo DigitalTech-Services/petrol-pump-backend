@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Sale;
 use App\Models\Station;
+use App\Models\StockEntry;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Illuminate\Http\Request;
 class DashboardController extends Controller
 {
     use ApiResponse;
+
+    private const STOCK_FUEL_TYPES = ['MS', 'HSD', 'Speed'];
 
     // A manager only ever sees their own figures; an owner sees their own account
     // plus every manager they created, combined — this is the "review all stats" view.
@@ -133,6 +136,7 @@ class DashboardController extends Controller
                     'phone_pe' => round($totalPhone, 2),
                     'card'     => round($totalCard,  2),
                 ],
+                'stock_levels'  => $this->stockLevelsData($scopeColumn, $scopeValues, $year, $month),
             ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
@@ -284,12 +288,43 @@ class DashboardController extends Controller
         }
     }
 
-    // GET /dashboard/stock-levels — placeholder (no stock intake table yet)
-    public function stockLevels(): JsonResponse
+    // GET /dashboard/stock-levels?period=YYYY-MM — current closing stock per fuel type
+    public function stockLevels(Request $request): JsonResponse
     {
-        return $this->success('Stock levels fetched.', [
-            'ms' => null, 'hsd' => null, 'speed' => null,
-        ]);
+        try {
+            [$year, $month] = $this->parseYearMonth($request);
+            [$scopeColumn, $scopeValues] = $this->saleScope($request);
+
+            return $this->success(
+                'Stock levels fetched.',
+                $this->stockLevelsData($scopeColumn, $scopeValues, $year, $month)
+            );
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
+    }
+
+    // Latest closing stock reading per fuel type within the given month —
+    // same "current level" concept as StockController::tankwise()'s latest_closing.
+    private function stockLevelsData(string $scopeColumn, array $scopeValues, int $year, int $month): array
+    {
+        $levels = [];
+
+        foreach (self::STOCK_FUEL_TYPES as $fuelType) {
+            $latest = StockEntry::whereIn($scopeColumn, $scopeValues)
+                ->where('fuel_type', $fuelType)
+                ->whereYear('date', $year)
+                ->whereMonth('date', $month)
+                ->orderBy('date', 'desc')
+                ->first();
+
+            $levels[strtolower($fuelType)] = $latest ? [
+                'closing' => (float) $latest->closing,
+                'date'    => $latest->date->format('Y-m-d'),
+            ] : null;
+        }
+
+        return $levels;
     }
 
     // ── Formatting helpers ────────────────────────────────────────────
