@@ -116,8 +116,8 @@ class StaffAttendanceController extends Controller
                 'staff_id' => 'required|integer',
                 'date'     => 'required|date',
                 'status'   => 'required|in:present,absent',
-                'in_time'  => 'nullable|date_format:H:i',
-                'out_time' => 'nullable|date_format:H:i',
+                'in_time'  => 'nullable|date_format:H:i,H:i:s',
+                'out_time' => 'nullable|date_format:H:i,H:i:s',
                 'notes'    => 'nullable|string|max:255',
             ]);
 
@@ -157,8 +157,8 @@ class StaffAttendanceController extends Controller
                 'records'              => 'required|array|min:1',
                 'records.*.staff_id'   => 'required|integer',
                 'records.*.status'     => 'required|in:present,absent',
-                'records.*.in_time'    => 'nullable|date_format:H:i',
-                'records.*.out_time'   => 'nullable|date_format:H:i',
+                'records.*.in_time'    => 'nullable|date_format:H:i,H:i:s',
+                'records.*.out_time'   => 'nullable|date_format:H:i,H:i:s',
                 'records.*.notes'      => 'nullable|string|max:255',
             ]);
 
@@ -222,8 +222,8 @@ class StaffAttendanceController extends Controller
 
             $data = $request->validate([
                 'status'   => 'sometimes|in:present,absent',
-                'in_time'  => 'sometimes|nullable|date_format:H:i',
-                'out_time' => 'sometimes|nullable|date_format:H:i',
+                'in_time'  => 'sometimes|nullable|date_format:H:i,H:i:s',
+                'out_time' => 'sometimes|nullable|date_format:H:i,H:i:s',
                 'notes'    => 'sometimes|nullable|string|max:255',
             ]);
 

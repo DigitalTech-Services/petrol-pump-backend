@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FuelRate;
 use App\Models\Sale;
 use App\Models\Station;
 use App\Models\StockEntry;
@@ -137,6 +138,7 @@ class DashboardController extends Controller
                     'card'     => round($totalCard,  2),
                 ],
                 'stock_levels'  => $this->stockLevelsData($scopeColumn, $scopeValues, $year, $month),
+                'profit_loss'   => $this->profitLossData($sales),
             ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
@@ -325,6 +327,46 @@ class DashboardController extends Controller
         }
 
         return $levels;
+    }
+
+    // Estimated profit/loss = (selling rate − actual/cost rate) × volume sold, per
+    // fuel type. Rates are configured per station (Settings → Fuel Rates), so sales
+    // are grouped by station and matched against that station's own rates — an
+    // owner viewing "All Stations" combines each station's margin correctly instead
+    // of applying one station's rates to everyone. Sales don't record a historical
+    // cost rate, so this uses each station's *current* FuelRate row — an
+    // approximation if rates changed mid-period, the same limitation Settings' own
+    // per-litre margin preview has.
+    private function profitLossData($sales): array
+    {
+        $byStation  = $sales->groupBy('station_id');
+        $stationIds = $byStation->keys()->filter()->all();
+
+        $ratesByStation = FuelRate::whereIn('station_id', $stationIds)
+            ->get()
+            ->groupBy('station_id');
+
+        $fuelVolumeColumns = ['ms' => 'ms_volume', 'hsd' => 'hsd_volume', 'speed' => 'speed_volume'];
+        $totals = ['ms' => 0.0, 'hsd' => 0.0, 'speed' => 0.0];
+
+        foreach ($byStation as $stationId => $stationSales) {
+            $stationRates = ($ratesByStation->get($stationId) ?? collect())->keyBy('fuel_key');
+
+            foreach ($fuelVolumeColumns as $key => $volumeColumn) {
+                $rate = $stationRates->get($key);
+                if (!$rate) continue;
+
+                $margin = (float) $rate->rate - (float) $rate->actual_rate;
+                $totals[$key] += $margin * (float) $stationSales->sum($volumeColumn);
+            }
+        }
+
+        return [
+            'total' => round(array_sum($totals), 2),
+            'ms'    => round($totals['ms'], 2),
+            'hsd'   => round($totals['hsd'], 2),
+            'speed' => round($totals['speed'], 2),
+        ];
     }
 
     // ── Formatting helpers ────────────────────────────────────────────
