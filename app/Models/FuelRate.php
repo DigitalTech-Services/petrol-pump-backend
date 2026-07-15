@@ -18,6 +18,7 @@ class FuelRate extends Model
         'abbr',
         'type',
         'rate',
+        'actual_rate',
         'effective_date',
         'color',
         'created_by_id', 'created_by_name', 'created_host_name', 'created_ip',
@@ -26,6 +27,7 @@ class FuelRate extends Model
 
     protected $casts = [
         'rate'           => 'float',
+        'actual_rate'    => 'float',
         'effective_date' => 'date:Y-m-d',
     ];
 
