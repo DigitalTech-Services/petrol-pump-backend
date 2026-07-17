@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Sale;
 use App\Models\Staff;
+use App\Models\StaffAttendance;
 use App\Models\Station;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -238,20 +239,29 @@ class ReportsController extends Controller
     {
         try {
             [$col, $ids] = $this->scope($request);
+            $period = $request->query('period', date('Y-m'));
 
             $staff = Staff::whereIn($col, $ids)
-                ->withSum('advances', 'amount')
+                ->withSum(['advances' => fn($q) => $q->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$period])], 'amount')
                 ->orderBy('id')
                 ->get()
-                ->map(function ($s) {
-                    $gross   = (float) $s->rate_per_day * (int) $s->days_worked;
+                ->map(function ($s) use ($period) {
+                    // Gross = Σ(hours × the rate in effect when each day was logged) —
+                    // same historical-rate-safe formula as StaffController/timesheet.
+                    $presentRecords = StaffAttendance::where('staff_id', $s->id)
+                        ->where('status', 'present')
+                        ->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$period])
+                        ->get(['total_hours', 'rate_per_hour']);
+
+                    $hours   = (float) $presentRecords->sum('total_hours');
+                    $gross   = (float) $presentRecords->sum(fn($a) => $a->total_hours * $a->rate_per_hour);
                     $advance = (float) ($s->advances_sum_amount ?? 0);
 
                     return [
                         'id'      => $s->id,
                         'name'    => $s->name,
                         'role'    => $s->role,
-                        'days'    => $s->days_worked,
+                        'hours'   => $hours,
                         'gross'   => round($gross, 2),
                         'advance' => round($advance, 2),
                         'net'     => round($gross - $advance, 2),

@@ -24,6 +24,7 @@ class StaffAttendance extends Model
         'in_time',
         'out_time',
         'total_hours',
+        'rate_per_hour',
         'notes',
         'created_by_id',
         'created_by_name',
@@ -36,8 +37,9 @@ class StaffAttendance extends Model
     ];
 
     protected $casts = [
-        'total_hours' => 'float',
-        'date'        => 'date',
+        'total_hours'   => 'float',
+        'rate_per_hour' => 'float',
+        'date'          => 'date',
     ];
 
     public function staff(): BelongsTo

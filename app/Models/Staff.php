@@ -23,9 +23,8 @@ class Staff extends Model
         'role',
         'phone',
         'join_date',
-        'rate_per_day',
+        'rate_per_hour',
         'shift_hours',
-        'days_worked',
         'notes',
         'created_by_id',
         'created_by_name',
@@ -38,10 +37,9 @@ class Staff extends Model
     ];
 
     protected $casts = [
-        'rate_per_day' => 'float',
-        'shift_hours'  => 'integer',
-        'days_worked'  => 'integer',
-        'join_date'    => 'date',
+        'rate_per_hour' => 'float',
+        'shift_hours'   => 'integer',
+        'join_date'     => 'date',
     ];
 
     public function user(): BelongsTo

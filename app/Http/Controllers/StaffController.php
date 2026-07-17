@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use App\Models\StaffAdvance;
+use App\Models\StaffAttendance;
 use App\Models\Station;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -37,17 +38,18 @@ class StaffController extends Controller
         return ['user_id', $request->user()->scopeUserIds()];
     }
 
-    // GET /staff
+    // GET /staff?month=YYYY-MM — gross salary reflects that month's logged hours
     public function index(Request $request): JsonResponse
     {
         try {
             [$col, $ids] = $this->scope($request);
+            $month = $request->query('month', now()->format('Y-m'));
 
             $staff = Staff::whereIn($col, $ids)
-                ->withSum('advances', 'amount')
+                ->withSum(['advances' => fn($q) => $q->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])], 'amount')
                 ->orderBy('id')
                 ->get()
-                ->map(fn($s) => $this->formatStaff($s));
+                ->map(fn($s) => $this->formatStaff($s, $month));
 
             return $this->success('Staff fetched!', ['staff' => $staff]);
         } catch (\Exception $e) {
@@ -60,47 +62,47 @@ class StaffController extends Controller
     {
         try {
             $data = $request->validate([
-                'name'         => 'required|string|max:255',
-                'role'         => 'required|string|max:100',
-                'phone'        => 'nullable|string|max:20',
-                'join_date'    => 'nullable|date',
-                'rate_per_day' => 'required|numeric|min:0',
-                'shift_hours'  => 'nullable|integer|min:1|max:24',
-                'days_worked'  => 'nullable|integer|min:0|max:31',
-                'notes'        => 'nullable|string',
+                'name'          => 'required|string|max:255',
+                'role'          => 'required|string|max:100',
+                'phone'         => 'nullable|string|max:20',
+                'join_date'     => 'nullable|date',
+                'rate_per_hour' => 'required|numeric|min:0',
+                'shift_hours'   => 'nullable|integer|min:1|max:24',
+                'notes'         => 'nullable|string',
             ]);
 
             $staff = Staff::create([
-                'user_id'      => $this->rootUserId($request),
-                'station_id'   => $request->user()->station_id,
-                'name'         => $data['name'],
-                'role'         => $data['role'],
-                'phone'        => $data['phone'] ?? null,
-                'join_date'    => $data['join_date'] ?? null,
-                'rate_per_day' => $data['rate_per_day'],
-                'shift_hours'  => $data['shift_hours'] ?? 8,
-                'days_worked'  => $data['days_worked'] ?? 30,
-                'notes'        => $data['notes'] ?? null,
+                'user_id'       => $this->rootUserId($request),
+                'station_id'    => $request->user()->station_id,
+                'name'          => $data['name'],
+                'role'          => $data['role'],
+                'phone'         => $data['phone'] ?? null,
+                'join_date'     => $data['join_date'] ?? null,
+                'rate_per_hour' => $data['rate_per_hour'],
+                'shift_hours'   => $data['shift_hours'] ?? 8,
+                'notes'         => $data['notes'] ?? null,
             ]);
 
             $staff->loadSum('advances', 'amount');
 
-            return $this->success('Staff created!', ['staff' => $this->formatStaff($staff)], 201);
+            return $this->success('Staff created!', ['staff' => $this->formatStaff($staff, now()->format('Y-m'))], 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
     }
 
-    // GET /staff/{id}
+    // GET /staff/{id}?month=YYYY-MM
     public function show(Request $request, int $id): JsonResponse
     {
         try {
             [$col, $ids] = $this->scope($request);
+            $month = $request->query('month', now()->format('Y-m'));
+
             $staff = Staff::whereIn($col, $ids)
-                ->withSum('advances', 'amount')
+                ->withSum(['advances' => fn($q) => $q->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])], 'amount')
                 ->findOrFail($id);
 
-            return $this->success('Staff fetched!', ['staff' => $this->formatStaff($staff)]);
+            return $this->success('Staff fetched!', ['staff' => $this->formatStaff($staff, $month)]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -113,20 +115,21 @@ class StaffController extends Controller
             $staff = Staff::where('user_id', $this->rootUserId($request))->findOrFail($id);
 
             $data = $request->validate([
-                'name'         => 'sometimes|string|max:255',
-                'role'         => 'sometimes|string|max:100',
-                'phone'        => 'sometimes|nullable|string|max:20',
-                'join_date'    => 'sometimes|nullable|date',
-                'rate_per_day' => 'sometimes|numeric|min:0',
-                'shift_hours'  => 'sometimes|integer|min:1|max:24',
-                'days_worked'  => 'sometimes|integer|min:0|max:31',
-                'notes'        => 'sometimes|nullable|string',
+                'name'          => 'sometimes|string|max:255',
+                'role'          => 'sometimes|string|max:100',
+                'phone'         => 'sometimes|nullable|string|max:20',
+                'join_date'     => 'sometimes|nullable|date',
+                'rate_per_hour' => 'sometimes|numeric|min:0',
+                'shift_hours'   => 'sometimes|integer|min:1|max:24',
+                'notes'         => 'sometimes|nullable|string',
             ]);
 
+            // Changing the rate here only affects attendance logged from now on —
+            // each already-logged day already carries its own rate snapshot.
             $staff->update($data);
             $staff->loadSum('advances', 'amount');
 
-            return $this->success('Staff updated!', ['staff' => $this->formatStaff($staff)]);
+            return $this->success('Staff updated!', ['staff' => $this->formatStaff($staff, now()->format('Y-m'))]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -222,10 +225,19 @@ class StaffController extends Controller
         }
     }
 
-    private function formatStaff(Staff $staff): array
+    // Gross pay = Σ(hours × the rate that was in effect when each day was logged) —
+    // never the staff's current rate, so a later rate change can't alter it.
+    private function formatStaff(Staff $staff, string $month): array
     {
-        $totalAdvance  = (float) ($staff->advances_sum_amount ?? 0);
-        $workingSalary = (float) ($staff->rate_per_day * $staff->days_worked);
+        $totalAdvance = (float) ($staff->advances_sum_amount ?? 0);
+
+        $presentRecords = StaffAttendance::where('staff_id', $staff->id)
+            ->where('status', 'present')
+            ->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])
+            ->get(['total_hours', 'rate_per_hour']);
+
+        $hoursWorked   = (float) $presentRecords->sum('total_hours');
+        $workingSalary = (float) $presentRecords->sum(fn($a) => $a->total_hours * $a->rate_per_hour);
 
         return [
             'id'             => $staff->id,
@@ -234,9 +246,9 @@ class StaffController extends Controller
             'role'           => $staff->role,
             'phone'          => $staff->phone,
             'join_date'      => $staff->join_date?->toDateString(),
-            'rate_per_day'   => (float) $staff->rate_per_day,
+            'rate_per_hour'  => (float) $staff->rate_per_hour,
             'shift_hours'    => $staff->shift_hours,
-            'days_worked'    => $staff->days_worked,
+            'hours_worked'   => $hoursWorked,
             'notes'          => $staff->notes,
             'total_advance'  => $totalAdvance,
             'working_salary' => $workingSalary,
