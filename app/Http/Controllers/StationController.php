@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FuelRate;
 use App\Models\Station;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -63,6 +64,14 @@ class StationController extends Controller
             ]);
 
             $station = Station::create(array_merge($data, ['user_id' => $request->user()->id]));
+
+            // Seed real fuel-rate rows immediately so profit/loss calculations have
+            // something to read from day one — without this a station could sit with
+            // zero FuelRate rows until someone happens to save Settings → Fuel Rates,
+            // silently making margin-based KPIs compute to zero despite real revenue.
+            foreach (FuelRate::defaults() as $rate) {
+                FuelRate::create(array_merge($rate, ['station_id' => $station->id]));
+            }
 
             return $this->success('Station created.', ['station' => $this->present($station)], 201);
         } catch (\Exception $e) {

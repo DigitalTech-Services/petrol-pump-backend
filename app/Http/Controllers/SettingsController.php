@@ -100,12 +100,6 @@ class SettingsController extends Controller
     // FUEL RATES
     // ──────────────────────────────────────────────────────────────────
 
-    private array $defaultFuelRates = [
-        ['fuel_key' => 'ms',    'name' => 'MS Petrol',  'abbr' => 'MS',  'type' => 'Motor Spirit',      'rate' => 104.77, 'actual_rate' => 98.50,  'effective_date' => '2026-04-01', 'color' => '#f59e0b'],
-        ['fuel_key' => 'hsd',   'name' => 'HSD Diesel', 'abbr' => 'HSD', 'type' => 'High Speed Diesel', 'rate' => 91.28,  'actual_rate' => 86.00,  'effective_date' => '2026-04-01', 'color' => '#10b981'],
-        ['fuel_key' => 'speed', 'name' => 'Speed',      'abbr' => 'SP',  'type' => 'Premium Petrol',    'rate' => 113.85, 'actual_rate' => 106.50, 'effective_date' => '2026-04-01', 'color' => '#3b82f6'],
-    ];
-
     public function getFuelRates(Request $request): JsonResponse
     {
         try {
@@ -116,7 +110,7 @@ class SettingsController extends Controller
             $rates   = FuelRate::where('station_id', $station->id)->get();
 
             return $this->success('Fuel rates fetched.', [
-                'fuel_rates' => $rates->isEmpty() ? $this->defaultFuelRates : $rates,
+                'fuel_rates' => $rates->isEmpty() ? FuelRate::defaults() : $rates,
             ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);

@@ -351,7 +351,10 @@ class DashboardController extends Controller
     // of applying one station's rates to everyone. Sales don't record a historical
     // cost rate, so this uses each station's *current* FuelRate row — an
     // approximation if rates changed mid-period, the same limitation Settings' own
-    // per-litre margin preview has.
+    // per-litre margin preview has. A station that has never saved Settings → Fuel
+    // Rates has zero FuelRate rows — falls back to FuelRate::defaults() (the same
+    // values Settings itself displays as a preview) rather than silently treating
+    // "no row" as "zero margin".
     private function profitLossData($sales): array
     {
         $byStation  = $sales->groupBy('station_id');
@@ -361,17 +364,20 @@ class DashboardController extends Controller
             ->get()
             ->groupBy('station_id');
 
+        $defaultRates = collect(FuelRate::defaults())->keyBy('fuel_key');
+
         $fuelVolumeColumns = ['ms' => 'ms_volume', 'hsd' => 'hsd_volume', 'speed' => 'speed_volume'];
         $totals = ['ms' => 0.0, 'hsd' => 0.0, 'speed' => 0.0];
 
         foreach ($byStation as $stationId => $stationSales) {
-            $stationRates = ($ratesByStation->get($stationId) ?? collect())->keyBy('fuel_key');
+            $stationRates = $ratesByStation->get($stationId) ?? collect();
+            $stationRates = $stationRates->isEmpty() ? $defaultRates : $stationRates->keyBy('fuel_key');
 
             foreach ($fuelVolumeColumns as $key => $volumeColumn) {
                 $rate = $stationRates->get($key);
                 if (!$rate) continue;
 
-                $margin = (float) $rate->rate - (float) $rate->actual_rate;
+                $margin = (float) $rate['rate'] - (float) $rate['actual_rate'];
                 $totals[$key] += $margin * (float) $stationSales->sum($volumeColumn);
             }
         }
