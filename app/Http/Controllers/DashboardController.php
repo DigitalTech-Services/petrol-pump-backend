@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\FuelRate;
 use App\Models\Sale;
+use App\Models\Staff;
+use App\Models\StaffAttendance;
 use App\Models\Station;
 use App\Models\StockEntry;
 use App\Traits\ApiResponse;
@@ -77,6 +79,9 @@ class DashboardController extends Controller
             $avgMs    = $days > 0 ? round($totalMs  / $days, 2) : 0;
             $bestSale = $sales->sortByDesc('revenue')->first();
 
+            $staffPayroll = $this->staffPayrollTotal($scopeColumn, $scopeValues, $year, $month);
+            $profitLoss   = $this->profitLossData($sales);
+
             $kpis = [
                 'totalRevenue'    => $this->inr($totalRev),
                 'msSold'          => $this->num($totalMs),
@@ -85,7 +90,7 @@ class DashboardController extends Controller
                 'totalCash'       => $this->inr($totalCash),
                 'totalPhonePe'    => $this->inr($totalPhone),
                 'totalExpenses'   => $this->inr($totalExp),
-                'staffPayroll'    => null,
+                'staffPayroll'    => $this->inr($staffPayroll),
                 'avgDailyRevenue' => $this->inr($avgRev),
                 'bestDay'         => $bestSale?->date?->format('d M, Y'),
                 'bestDayRevenue'  => $this->inr((float)($bestSale?->revenue ?? 0)),
@@ -138,7 +143,17 @@ class DashboardController extends Controller
                     'card'     => round($totalCard,  2),
                 ],
                 'stock_levels'  => $this->stockLevelsData($scopeColumn, $scopeValues, $year, $month),
-                'profit_loss'   => $this->profitLossData($sales),
+                'profit_loss'   => $profitLoss,
+                'actual_profit' => [
+                    // Actual profit = fuel margin − expenses (Sale.expenses, same source
+                    // as the Total Expenses KPI) − staff payroll (gross, hours × rate;
+                    // advances are just an early payout of this same earned salary, not
+                    // an extra cost, so they aren't subtracted again here).
+                    'total'         => round($profitLoss['total'] - $totalExp - $staffPayroll, 2),
+                    'fuel_margin'   => $profitLoss['total'],
+                    'expenses'      => round($totalExp, 2),
+                    'staff_payroll' => round($staffPayroll, 2),
+                ],
             ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
@@ -367,6 +382,25 @@ class DashboardController extends Controller
             'hsd'   => round($totals['hsd'], 2),
             'speed' => round($totals['speed'], 2),
         ];
+    }
+
+    // Total staff labor cost for the month — Σ(hours × the rate snapshot in effect
+    // when each day was logged), same formula as StaffController::formatStaff()'s
+    // per-staff working_salary, summed across every staff member in scope.
+    private function staffPayrollTotal(string $scopeColumn, array $scopeValues, int $year, int $month): float
+    {
+        $staffIds = Staff::whereIn($scopeColumn, $scopeValues)->pluck('id');
+
+        if ($staffIds->isEmpty()) {
+            return 0.0;
+        }
+
+        return (float) StaffAttendance::whereIn('staff_id', $staffIds)
+            ->where('status', 'present')
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->get(['total_hours', 'rate_per_hour'])
+            ->sum(fn($a) => $a->total_hours * $a->rate_per_hour);
     }
 
     // ── Formatting helpers ────────────────────────────────────────────
