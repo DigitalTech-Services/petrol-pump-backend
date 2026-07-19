@@ -148,7 +148,9 @@ class UserController extends Controller
             $data = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
-                'contact' => 'required|unique:users,contact',
+                // Column is varchar(10) — validate format/length here so a bad
+                // number gets a clean error instead of a raw DB truncation error.
+                'contact' => ['required', 'string', 'max:10', 'regex:/^[6-9][0-9]{9}$/', 'unique:users,contact'],
                 'password' => 'required|string|min:8',
                 'station_id' => 'sometimes|nullable|integer',
             ]);

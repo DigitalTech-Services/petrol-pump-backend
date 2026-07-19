@@ -14,6 +14,14 @@ class SettingsController extends Controller
 {
     use ApiResponse;
 
+    // Same format rules as StationController — gst/pan/phone are optional, but
+    // when provided must match the standard Indian format; `(...)?` lets an
+    // empty string still pass.
+    private const NAME_RULE  = ['string', 'max:255', "regex:/^[A-Za-z][A-Za-z .'-]{1,254}$/"];
+    private const GST_RULE   = ['string', 'max:20', 'regex:/^([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z])?$/'];
+    private const PAN_RULE   = ['string', 'max:20', 'regex:/^([A-Z]{5}[0-9]{4}[A-Z])?$/'];
+    private const PHONE_RULE = ['string', 'max:20', 'regex:/^([6-9][0-9]{9})?$/'];
+
     // Settings/fuel-rates/nozzles belong to a single station, shared by whoever runs it.
     // A manager always resolves their own assigned station. An owner (read-only, see
     // role:user,sub_user on the GET routes) must pick a specific station via
@@ -68,14 +76,14 @@ class SettingsController extends Controller
             }
 
             $data = $request->validate([
-                'name'        => 'sometimes|string|max:255',
+                'name'        => ['sometimes', ...self::NAME_RULE],
                 'dealer_code' => 'sometimes|string|max:255',
                 'address'     => 'sometimes|string',
                 'city'        => 'sometimes|string|max:100',
                 'state'       => 'sometimes|string|max:100',
-                'gst'         => 'sometimes|string|max:20',
-                'pan'         => 'sometimes|string|max:20',
-                'phone'       => 'sometimes|string|max:20',
+                'gst'         => ['sometimes', ...self::GST_RULE],
+                'pan'         => ['sometimes', ...self::PAN_RULE],
+                'phone'       => ['sometimes', ...self::PHONE_RULE],
             ]);
 
             $station->update($data);
