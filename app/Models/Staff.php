@@ -23,7 +23,7 @@ class Staff extends Model
         'role',
         'phone',
         'join_date',
-        'rate_per_hour',
+        'monthly_salary',
         'shift_hours',
         'notes',
         'created_by_id',
@@ -37,10 +37,22 @@ class Staff extends Model
     ];
 
     protected $casts = [
-        'rate_per_hour' => 'float',
-        'shift_hours'   => 'integer',
-        'join_date'     => 'date',
+        'monthly_salary' => 'float',
+        'shift_hours'    => 'integer',
+        'join_date'      => 'date',
     ];
+
+    // Hourly equivalent of the monthly salary, recomputed from today's calendar
+    // days so it stays accurate as months change length (28-31 days) — never
+    // cached or stored, so it's always current at the moment it's read.
+    public function currentRatePerHour(): float
+    {
+        if ($this->shift_hours <= 0) {
+            return 0.0;
+        }
+
+        return round($this->monthly_salary / now()->daysInMonth / $this->shift_hours, 2);
+    }
 
     public function user(): BelongsTo
     {

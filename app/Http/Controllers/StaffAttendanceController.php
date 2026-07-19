@@ -65,7 +65,7 @@ class StaffAttendanceController extends Controller
                 'id'           => $a->staff->id,
                 'name'         => $a->staff->name,
                 'role'         => $a->staff->role,
-                'rate_per_hour'=> (float) $a->staff->rate_per_hour,
+                'rate_per_hour'=> $a->staff->currentRatePerHour(),
             ] : null,
             'date'          => $a->date?->toDateString(),
             'status'        => $a->status,
@@ -88,7 +88,7 @@ class StaffAttendanceController extends Controller
             [$col, $ids] = $this->scope($request);
 
             $query = StaffAttendance::whereIn($col, $ids)
-                ->with('staff:id,name,role,rate_per_hour')
+                ->with('staff:id,name,role,monthly_salary,shift_hours')
                 ->orderBy('date')
                 ->orderBy('staff_id');
 
@@ -140,12 +140,12 @@ class StaffAttendanceController extends Controller
                     'total_hours'   => $totalHours,
                     // Snapshot the staff's current rate — this day's pay stays
                     // correct even if the rate changes later.
-                    'rate_per_hour' => $staff->rate_per_hour,
+                    'rate_per_hour' => $staff->currentRatePerHour(),
                     'notes'         => $data['notes'] ?? null,
                 ]
             );
 
-            $record->load('staff:id,name,role,rate_per_hour');
+            $record->load('staff:id,name,role,monthly_salary,shift_hours');
 
             return $this->success('Attendance recorded!', ['attendance' => $this->formatRecord($record)], 201);
         } catch (\Exception $e) {
@@ -187,7 +187,7 @@ class StaffAttendanceController extends Controller
                         'in_time'       => $rec['in_time'] ?? null,
                         'out_time'      => $rec['out_time'] ?? null,
                         'total_hours'   => $totalHours,
-                        'rate_per_hour' => $staff->rate_per_hour,
+                        'rate_per_hour' => $staff->currentRatePerHour(),
                         'notes'         => $rec['notes'] ?? null,
                     ]
                 );
@@ -211,7 +211,7 @@ class StaffAttendanceController extends Controller
         try {
             [$col, $ids] = $this->scope($request);
             $record = StaffAttendance::whereIn($col, $ids)
-                ->with('staff:id,name,role,rate_per_hour')
+                ->with('staff:id,name,role,monthly_salary,shift_hours')
                 ->findOrFail($id);
 
             return $this->success('Record fetched!', ['attendance' => $this->formatRecord($record)]);
@@ -241,7 +241,7 @@ class StaffAttendanceController extends Controller
             }
 
             $record->update($data);
-            $record->load('staff:id,name,role,rate_per_hour');
+            $record->load('staff:id,name,role,monthly_salary,shift_hours');
 
             return $this->success('Attendance updated!', ['attendance' => $this->formatRecord($record)]);
         } catch (\Exception $e) {
@@ -296,7 +296,7 @@ class StaffAttendanceController extends Controller
                         'id'           => $s->id,
                         'name'         => $s->name,
                         'role'         => $s->role,
-                        'rate_per_hour'=> (float) $s->rate_per_hour,
+                        'rate_per_hour'=> $s->currentRatePerHour(),
                         'shift_hours'  => $s->shift_hours,
                         'in_time'      => $s->attendance->last()?->in_time,
                         'out_time'     => $s->attendance->last()?->out_time,

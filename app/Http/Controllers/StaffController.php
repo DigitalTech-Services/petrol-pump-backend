@@ -62,25 +62,25 @@ class StaffController extends Controller
     {
         try {
             $data = $request->validate([
-                'name'          => 'required|string|max:255',
-                'role'          => 'required|string|max:100',
-                'phone'         => 'nullable|string|max:20',
-                'join_date'     => 'nullable|date',
-                'rate_per_hour' => 'required|numeric|min:0',
-                'shift_hours'   => 'nullable|integer|min:1|max:24',
-                'notes'         => 'nullable|string',
+                'name'           => 'required|string|min:2|max:255',
+                'role'           => 'required|string|max:100',
+                'phone'          => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s-]{10,20}$/'],
+                'join_date'      => 'nullable|date',
+                'monthly_salary' => 'required|numeric|min:1',
+                'shift_hours'    => 'nullable|integer|min:1|max:24',
+                'notes'          => 'nullable|string',
             ]);
 
             $staff = Staff::create([
-                'user_id'       => $this->rootUserId($request),
-                'station_id'    => $request->user()->station_id,
-                'name'          => $data['name'],
-                'role'          => $data['role'],
-                'phone'         => $data['phone'] ?? null,
-                'join_date'     => $data['join_date'] ?? null,
-                'rate_per_hour' => $data['rate_per_hour'],
-                'shift_hours'   => $data['shift_hours'] ?? 8,
-                'notes'         => $data['notes'] ?? null,
+                'user_id'        => $this->rootUserId($request),
+                'station_id'     => $request->user()->station_id,
+                'name'           => $data['name'],
+                'role'           => $data['role'],
+                'phone'          => $data['phone'] ?? null,
+                'join_date'      => $data['join_date'] ?? null,
+                'monthly_salary' => $data['monthly_salary'],
+                'shift_hours'    => $data['shift_hours'] ?? 8,
+                'notes'          => $data['notes'] ?? null,
             ]);
 
             $staff->loadSum('advances', 'amount');
@@ -115,17 +115,18 @@ class StaffController extends Controller
             $staff = Staff::where('user_id', $this->rootUserId($request))->findOrFail($id);
 
             $data = $request->validate([
-                'name'          => 'sometimes|string|max:255',
-                'role'          => 'sometimes|string|max:100',
-                'phone'         => 'sometimes|nullable|string|max:20',
-                'join_date'     => 'sometimes|nullable|date',
-                'rate_per_hour' => 'sometimes|numeric|min:0',
-                'shift_hours'   => 'sometimes|integer|min:1|max:24',
-                'notes'         => 'sometimes|nullable|string',
+                'name'           => 'sometimes|string|min:2|max:255',
+                'role'           => 'sometimes|string|max:100',
+                'phone'          => ['sometimes', 'nullable', 'string', 'max:20', 'regex:/^[0-9+\s-]{10,20}$/'],
+                'join_date'      => 'sometimes|nullable|date',
+                'monthly_salary' => 'sometimes|numeric|min:1',
+                'shift_hours'    => 'sometimes|integer|min:1|max:24',
+                'notes'          => 'sometimes|nullable|string',
             ]);
 
-            // Changing the rate here only affects attendance logged from now on —
-            // each already-logged day already carries its own rate snapshot.
+            // Changing the salary/shift hours here only affects the hourly rate
+            // used from now on — each already-logged day already carries its own
+            // rate snapshot (see StaffAttendance.rate_per_hour).
             $staff->update($data);
             $staff->loadSum('advances', 'amount');
 
@@ -246,7 +247,8 @@ class StaffController extends Controller
             'role'           => $staff->role,
             'phone'          => $staff->phone,
             'join_date'      => $staff->join_date?->toDateString(),
-            'rate_per_hour'  => (float) $staff->rate_per_hour,
+            'rate_per_hour'  => $staff->currentRatePerHour(),
+            'monthly_salary' => (float) $staff->monthly_salary,
             'shift_hours'    => $staff->shift_hours,
             'hours_worked'   => $hoursWorked,
             'notes'          => $staff->notes,
