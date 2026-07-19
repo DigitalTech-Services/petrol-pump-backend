@@ -209,10 +209,11 @@ Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('stock')->group(fun
 // summary/nozzles registered before {id} to avoid wildcard match
 // -------------------------------------------------
 Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('meters')->group(function () {
-    Route::get('/summary', [MeterReadingController::class, 'summary']);
-    Route::get('/nozzles', [MeterReadingController::class, 'nozzles']);
-    Route::get('/',        [MeterReadingController::class, 'index']);
-    Route::get('/{id}',    [MeterReadingController::class, 'show']);
+    Route::get('/summary',       [MeterReadingController::class, 'summary']);
+    Route::get('/nozzles',       [MeterReadingController::class, 'nozzles']);
+    Route::get('/last-readings', [MeterReadingController::class, 'lastReadings']);
+    Route::get('/',              [MeterReadingController::class, 'index']);
+    Route::get('/{id}',          [MeterReadingController::class, 'show']);
 });
 Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('meters')->group(function () {
     Route::post('/',       [MeterReadingController::class, 'store']);

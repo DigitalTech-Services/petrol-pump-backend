@@ -216,6 +216,35 @@ class MeterReadingController extends Controller
         }
     }
 
+    // GET /meters/last-readings?before=YYYY-MM-DD — closing reading per nozzle from
+    // the most recent prior day's entry (whichever day that was, not necessarily
+    // literally yesterday), so a new day's opening can be pre-filled from it.
+    public function lastReadings(Request $request): JsonResponse
+    {
+        try {
+            [$col, $ids] = $this->scope($request);
+            $before = $request->query('before', now()->format('Y-m-d'));
+
+            $lastReading = MeterReading::with('nozzleReadings')
+                ->whereIn($col, $ids)
+                ->whereDate('date', '<', $before)
+                ->orderBy('date', 'desc')
+                ->first();
+
+            $closing = [];
+            foreach ($lastReading?->nozzleReadings ?? [] as $nr) {
+                $closing[$nr->nozzle_id] = (float) $nr->closing;
+            }
+
+            return $this->success('Last readings fetched.', [
+                'date'    => $lastReading?->date?->toDateString(),
+                'closing' => $closing,
+            ]);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
+    }
+
     // GET /meters/summary?month=YYYY-MM
     public function summary(Request $request): JsonResponse
     {
