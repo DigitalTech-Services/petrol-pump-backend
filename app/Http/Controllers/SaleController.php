@@ -90,6 +90,9 @@ class SaleController extends Controller
                 'ms_volume'    => 'sometimes|numeric|min:0',
                 'hsd_volume'   => 'sometimes|numeric|min:0',
                 'speed_volume' => 'sometimes|numeric|min:0',
+                'ms_testing_volume'    => 'sometimes|numeric|min:0',
+                'hsd_testing_volume'   => 'sometimes|numeric|min:0',
+                'speed_testing_volume' => 'sometimes|numeric|min:0',
                 'rate_ms'      => 'sometimes|numeric|min:0',
                 'rate_hsd'     => 'sometimes|numeric|min:0',
                 'rate_speed'   => 'sometimes|numeric|min:0',
@@ -103,10 +106,18 @@ class SaleController extends Controller
                 'narration'    => 'sometimes|nullable|string',
             ]);
 
+            // Testing volume (fuel dispensed for meter calibration) isn't sold — deduct it
+            // from the gross entered volume so the stored volume and revenue both reflect
+            // only what was actually sold. Not persisted as its own column.
+            $data['ms_volume']    = max(0, ($data['ms_volume']    ?? 0) - ($data['ms_testing_volume']    ?? 0));
+            $data['hsd_volume']   = max(0, ($data['hsd_volume']   ?? 0) - ($data['hsd_testing_volume']   ?? 0));
+            $data['speed_volume'] = max(0, ($data['speed_volume'] ?? 0) - ($data['speed_testing_volume'] ?? 0));
+            unset($data['ms_testing_volume'], $data['hsd_testing_volume'], $data['speed_testing_volume']);
+
             // Compute revenue and balance server-side as a safeguard
-            $msRev    = ($data['ms_volume']    ?? 0) * ($data['rate_ms']    ?? 0);
-            $hsdRev   = ($data['hsd_volume']   ?? 0) * ($data['rate_hsd']   ?? 0);
-            $speedRev = ($data['speed_volume'] ?? 0) * ($data['rate_speed'] ?? 0);
+            $msRev    = $data['ms_volume']    * ($data['rate_ms']    ?? 0);
+            $hsdRev   = $data['hsd_volume']   * ($data['rate_hsd']   ?? 0);
+            $speedRev = $data['speed_volume'] * ($data['rate_speed'] ?? 0);
 
             $data['revenue'] = round($msRev + $hsdRev + $speedRev, 2);
             $data['balance'] = round(
@@ -148,6 +159,9 @@ class SaleController extends Controller
                 'ms_volume'    => 'sometimes|numeric|min:0',
                 'hsd_volume'   => 'sometimes|numeric|min:0',
                 'speed_volume' => 'sometimes|numeric|min:0',
+                'ms_testing_volume'    => 'sometimes|numeric|min:0',
+                'hsd_testing_volume'   => 'sometimes|numeric|min:0',
+                'speed_testing_volume' => 'sometimes|numeric|min:0',
                 'rate_ms'      => 'sometimes|numeric|min:0',
                 'rate_hsd'     => 'sometimes|numeric|min:0',
                 'rate_speed'   => 'sometimes|numeric|min:0',
@@ -160,6 +174,19 @@ class SaleController extends Controller
                 'balance'      => 'sometimes|numeric',
                 'narration'    => 'sometimes|nullable|string',
             ]);
+
+            // Testing volume isn't sold — deduct it from the gross volume being set
+            // this request before it becomes the stored/revenue-generating volume.
+            if (array_key_exists('ms_volume', $data) || array_key_exists('ms_testing_volume', $data)) {
+                $data['ms_volume'] = max(0, ($data['ms_volume'] ?? $sale->ms_volume) - ($data['ms_testing_volume'] ?? 0));
+            }
+            if (array_key_exists('hsd_volume', $data) || array_key_exists('hsd_testing_volume', $data)) {
+                $data['hsd_volume'] = max(0, ($data['hsd_volume'] ?? $sale->hsd_volume) - ($data['hsd_testing_volume'] ?? 0));
+            }
+            if (array_key_exists('speed_volume', $data) || array_key_exists('speed_testing_volume', $data)) {
+                $data['speed_volume'] = max(0, ($data['speed_volume'] ?? $sale->speed_volume) - ($data['speed_testing_volume'] ?? 0));
+            }
+            unset($data['ms_testing_volume'], $data['hsd_testing_volume'], $data['speed_testing_volume']);
 
             // Recompute revenue & balance if volume/rate fields are being updated
             $msVol    = $data['ms_volume']    ?? $sale->ms_volume;
