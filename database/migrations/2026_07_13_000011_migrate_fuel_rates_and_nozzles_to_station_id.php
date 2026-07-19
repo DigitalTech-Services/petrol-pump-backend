@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -51,8 +52,14 @@ return new class extends Migration
             $table->dropColumn('station_id');
         });
         Schema::table('fuel_rates', function (Blueprint $table) {
-            $table->unsignedBigInteger('user_id')->after('id');
+            // Nullable for now — backfilled below, then locked down with the FK.
+            $table->unsignedBigInteger('user_id')->nullable()->after('id');
         });
+        DB::statement('
+            UPDATE fuel_rates fr
+            JOIN stations s ON s.id = fr.station_id
+            SET fr.user_id = s.user_id
+        ');
         Schema::table('fuel_rates', function (Blueprint $table) {
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->unique(['user_id', 'fuel_key']);
@@ -65,8 +72,13 @@ return new class extends Migration
             $table->dropColumn('station_id');
         });
         Schema::table('nozzles', function (Blueprint $table) {
-            $table->unsignedBigInteger('user_id')->after('id');
+            $table->unsignedBigInteger('user_id')->nullable()->after('id');
         });
+        DB::statement('
+            UPDATE nozzles n
+            JOIN stations s ON s.id = n.station_id
+            SET n.user_id = s.user_id
+        ');
         Schema::table('nozzles', function (Blueprint $table) {
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
