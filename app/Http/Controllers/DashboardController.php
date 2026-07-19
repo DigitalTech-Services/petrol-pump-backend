@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Expense;
 use App\Models\FuelRate;
 use App\Models\Sale;
 use App\Models\Staff;
@@ -72,7 +73,13 @@ class DashboardController extends Controller
             $totalCash  = (float)$sales->sum('cash');
             $totalCard  = (float)$sales->sum('card');
             $totalPhone = (float)$sales->sum('phone_pe');
-            $totalExp   = (float)$sales->sum('expenses');
+            // The categorized Expense ledger (Expenses tab) is the real source of
+            // truth for operating costs — not Sale.expenses, which is just a manual
+            // per-entry field on the daily sale record and is usually left blank.
+            $totalExp   = (float) Expense::whereIn($scopeColumn, $scopeValues)
+                ->whereYear('date', $year)
+                ->whereMonth('date', $month)
+                ->sum('amount');
             $totalFuel  = $totalMs + $totalHsd + $totalSpeed;
 
             $avgRev   = $days > 0 ? round($totalRev / $days, 2) : 0;
@@ -145,7 +152,7 @@ class DashboardController extends Controller
                 'stock_levels'  => $this->stockLevelsData($scopeColumn, $scopeValues, $year, $month),
                 'profit_loss'   => $profitLoss,
                 'actual_profit' => [
-                    // Actual profit = fuel margin − expenses (Sale.expenses, same source
+                    // Actual profit = fuel margin − expenses (Expense ledger, same source
                     // as the Total Expenses KPI) − staff payroll (gross, hours × rate;
                     // advances are just an early payout of this same earned salary, not
                     // an extra cost, so they aren't subtracted again here).
@@ -180,7 +187,10 @@ class DashboardController extends Controller
             $totalCash  = (float)$sales->sum('cash');
             $totalCard  = (float)$sales->sum('card');
             $totalPhone = (float)$sales->sum('phone_pe');
-            $totalExp   = (float)$sales->sum('expenses');
+            $totalExp   = (float) Expense::whereIn($scopeColumn, $scopeValues)
+                ->whereYear('date', $year)
+                ->whereMonth('date', $month)
+                ->sum('amount');
             $totalFuel  = $totalMs + $totalHsd + $totalSpeed;
 
             $avgRev     = $days > 0 ? round($totalRev  / $days, 2) : 0;

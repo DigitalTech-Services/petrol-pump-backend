@@ -198,4 +198,23 @@ class ExpenseController extends Controller
     {
         return $this->success('Categories fetched.', ['categories' => self::CATEGORIES]);
     }
+
+    // GET /expenses/total-for-date?date=YYYY-MM-DD — total already logged for one
+    // exact day, used to prefill the Expenses field on the New Sale Entry form.
+    public function totalForDate(Request $request): JsonResponse
+    {
+        try {
+            [$col, $ids] = $this->scope($request);
+
+            $data = $request->validate([
+                'date' => 'required|date',
+            ]);
+
+            $total = Expense::whereIn($col, $ids)->whereDate('date', $data['date'])->sum('amount');
+
+            return $this->success('Total fetched.', ['total' => round((float) $total, 2)]);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
+    }
 }

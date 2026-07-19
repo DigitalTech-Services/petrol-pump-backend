@@ -158,10 +158,11 @@ Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
 // Writes: manager only. Fixed paths registered before {id}.
 // -------------------------------------------------
 Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('expenses')->group(function () {
-    Route::get('/categories', [ExpenseController::class, 'categories']);
-    Route::get('/summary',    [ExpenseController::class, 'summary']);
-    Route::get('/',           [ExpenseController::class, 'index']);
-    Route::get('/{id}',       [ExpenseController::class, 'show']);
+    Route::get('/categories',      [ExpenseController::class, 'categories']);
+    Route::get('/summary',         [ExpenseController::class, 'summary']);
+    Route::get('/total-for-date',  [ExpenseController::class, 'totalForDate']);
+    Route::get('/',                [ExpenseController::class, 'index']);
+    Route::get('/{id}',            [ExpenseController::class, 'show']);
 });
 Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('expenses')->group(function () {
     Route::post('/',          [ExpenseController::class, 'store']);
