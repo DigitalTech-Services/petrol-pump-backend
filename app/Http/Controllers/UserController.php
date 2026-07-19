@@ -48,7 +48,10 @@ class UserController extends Controller
     {
         return array_merge(
             $subUser->only($this->userFields()),
-            ['station' => $subUser->station?->only(['id', 'name'])]
+            [
+                'business_name' => $subUser->resolveBusinessName(),
+                'station' => $subUser->station?->only(['id', 'name']),
+            ]
         );
     }
 
