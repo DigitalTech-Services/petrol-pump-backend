@@ -36,16 +36,18 @@ class FuelRate extends Model
         return $this->belongsTo(Station::class);
     }
 
-    // Starter rates for a station that has never saved Settings → Fuel Rates —
-    // used both to seed a new station's real rows and as the fallback a station
-    // without any saved row should be treated as (see DashboardController's
-    // profit/loss calc), so it matches what Settings itself already displays.
-    public static function defaults(): array
+    // The rate in effect for a station+fuel on a specific date (defaults to
+    // today) — the latest saved row whose effective_date is on or before that
+    // date. Returns null if the station has never saved a rate for that fuel
+    // on or before that date — callers must treat that as "not configured yet",
+    // never fabricate a number, since a stale rate is actively misleading.
+    public static function effectiveFor(int $stationId, string $fuelKey, ?string $date = null): ?self
     {
-        return [
-            ['fuel_key' => 'ms',    'name' => 'MS Petrol',  'abbr' => 'MS',  'type' => 'Motor Spirit',      'rate' => 104.77, 'actual_rate' => 98.50,  'effective_date' => '2026-04-01', 'color' => '#f59e0b'],
-            ['fuel_key' => 'hsd',   'name' => 'HSD Diesel', 'abbr' => 'HSD', 'type' => 'High Speed Diesel', 'rate' => 91.28,  'actual_rate' => 86.00,  'effective_date' => '2026-04-01', 'color' => '#10b981'],
-            ['fuel_key' => 'speed', 'name' => 'Speed',      'abbr' => 'SP',  'type' => 'Premium Petrol',    'rate' => 113.85, 'actual_rate' => 106.50, 'effective_date' => '2026-04-01', 'color' => '#3b82f6'],
-        ];
+        return static::where('station_id', $stationId)
+            ->where('fuel_key', $fuelKey)
+            ->whereDate('effective_date', '<=', $date ?? now()->format('Y-m-d'))
+            ->orderByDesc('effective_date')
+            ->orderByDesc('id')
+            ->first();
     }
 }

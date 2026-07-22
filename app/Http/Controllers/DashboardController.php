@@ -354,41 +354,44 @@ class DashboardController extends Controller
         return $levels;
     }
 
-    // Estimated profit/loss = (selling rate − actual/cost rate) × volume sold, per
-    // fuel type. Rates are configured per station (Settings → Fuel Rates), so sales
-    // are grouped by station and matched against that station's own rates — an
-    // owner viewing "All Stations" combines each station's margin correctly instead
-    // of applying one station's rates to everyone. Sales don't record a historical
-    // cost rate, so this uses each station's *current* FuelRate row — an
-    // approximation if rates changed mid-period, the same limitation Settings' own
-    // per-litre margin preview has. A station that has never saved Settings → Fuel
-    // Rates has zero FuelRate rows — falls back to FuelRate::defaults() (the same
-    // values Settings itself displays as a preview) rather than silently treating
-    // "no row" as "zero margin".
+    // Actual profit/loss = (selling rate − actual/cost rate) × volume sold, per
+    // fuel type, using the rate that was actually in effect on EACH sale's own
+    // date — not just today's rate — since fuel rates change daily and a station
+    // may have saved several different rates across the queried period. Rates
+    // are configured per station (Settings → Fuel Rates), so this is computed
+    // per sale (never mixing one station's rates into another's volume) and
+    // summed. A fuel with no saved rate on or before a sale's date contributes
+    // zero margin for that sale — correctly "not configured yet", never a
+    // fabricated number.
     private function profitLossData($sales): array
     {
-        $byStation  = $sales->groupBy('station_id');
-        $stationIds = $byStation->keys()->filter()->all();
+        $stationIds = $sales->pluck('station_id')->filter()->unique()->values();
 
+        // Preload every historical rate row for these stations once, then
+        // resolve each sale's applicable rate in memory — avoids one query
+        // per sale while still being date-accurate per sale.
         $ratesByStation = FuelRate::whereIn('station_id', $stationIds)
             ->get()
             ->groupBy('station_id');
 
-        $defaultRates = collect(FuelRate::defaults())->keyBy('fuel_key');
-
         $fuelVolumeColumns = ['ms' => 'ms_volume', 'hsd' => 'hsd_volume', 'speed' => 'speed_volume'];
         $totals = ['ms' => 0.0, 'hsd' => 0.0, 'speed' => 0.0];
 
-        foreach ($byStation as $stationId => $stationSales) {
-            $stationRates = $ratesByStation->get($stationId) ?? collect();
-            $stationRates = $stationRates->isEmpty() ? $defaultRates : $stationRates->keyBy('fuel_key');
+        foreach ($sales as $sale) {
+            if (!$sale->station_id) continue;
+            $stationRates = $ratesByStation->get($sale->station_id) ?? collect();
 
             foreach ($fuelVolumeColumns as $key => $volumeColumn) {
-                $rate = $stationRates->get($key);
+                $rate = $stationRates
+                    ->where('fuel_key', $key)
+                    ->where('effective_date', '<=', $sale->date)
+                    ->sortByDesc('effective_date')
+                    ->first();
+
                 if (!$rate) continue;
 
-                $margin = (float) $rate['rate'] - (float) $rate['actual_rate'];
-                $totals[$key] += $margin * (float) $stationSales->sum($volumeColumn);
+                $margin = (float) $rate->rate - (float) $rate->actual_rate;
+                $totals[$key] += $margin * (float) $sale->{$volumeColumn};
             }
         }
 

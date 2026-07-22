@@ -100,6 +100,39 @@ class SettingsController extends Controller
     // FUEL RATES
     // ──────────────────────────────────────────────────────────────────
 
+    // Display-only labels/colors for the three known fuel types — never a rate
+    // value. Actual rate/actual_rate always come from a real saved FuelRate row,
+    // or 0 ("not configured yet") — never a fabricated number, since fuel rates
+    // change daily and a stale placeholder would be actively misleading.
+    private const FUEL_META = [
+        'ms'    => ['name' => 'MS Petrol',  'abbr' => 'MS',  'type' => 'Motor Spirit',      'color' => '#f59e0b'],
+        'hsd'   => ['name' => 'HSD Diesel', 'abbr' => 'HSD', 'type' => 'High Speed Diesel', 'color' => '#10b981'],
+        'speed' => ['name' => 'Speed',      'abbr' => 'SP',  'type' => 'Premium Petrol',    'color' => '#3b82f6'],
+    ];
+
+    // Builds one row per known fuel type, using the rate in effect on $date
+    // (defaults to today) if one has been saved, else zeroed-out placeholders.
+    private function fuelRatesResponse(int $stationId, ?string $date = null): array
+    {
+        return collect(self::FUEL_META)->map(function ($meta, $key) use ($stationId, $date) {
+            $current = FuelRate::effectiveFor($stationId, $key, $date);
+
+            return [
+                'fuel_key'       => $key,
+                'name'           => $current->name           ?? $meta['name'],
+                'abbr'           => $current->abbr           ?? $meta['abbr'],
+                'type'           => $current->type            ?? $meta['type'],
+                'color'          => $current->color           ?? $meta['color'],
+                'rate'           => (float) ($current->rate        ?? 0),
+                'actual_rate'    => (float) ($current->actual_rate ?? 0),
+                'effective_date' => $current?->effective_date?->toDateString(),
+            ];
+        })->values()->all();
+    }
+
+    // GET /settings/fuel-rates?station_id=&date=YYYY-MM-DD — date defaults to
+    // today; the New Sale Entry form passes the sale's own date so it always
+    // prefills with whatever rate was actually in effect on THAT day.
     public function getFuelRates(Request $request): JsonResponse
     {
         try {
@@ -107,10 +140,9 @@ class SettingsController extends Controller
             if (!$station) {
                 return $this->error(self::NO_STATION_MESSAGE, 422);
             }
-            $rates   = FuelRate::where('station_id', $station->id)->get();
 
             return $this->success('Fuel rates fetched.', [
-                'fuel_rates' => $rates->isEmpty() ? FuelRate::defaults() : $rates,
+                'fuel_rates' => $this->fuelRatesResponse($station->id, $request->query('date')),
             ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
@@ -138,22 +170,27 @@ class SettingsController extends Controller
             ]);
 
             foreach ($data['rates'] as $r) {
+                // Keyed by date too (not just station+fuel_key) — this appends a
+                // new historical row instead of overwriting the previous rate, so
+                // a past sale's margin can later use the rate that was actually
+                // in effect that day. Saving twice for the same date still just
+                // corrects that day's row.
                 FuelRate::updateOrCreate(
-                    ['station_id' => $station->id, 'fuel_key' => $r['fuel_key']],
+                    ['station_id' => $station->id, 'fuel_key' => $r['fuel_key'], 'effective_date' => $r['effective_date']],
                     array_filter([
-                        'name'           => $r['name']           ?? null,
-                        'abbr'           => $r['abbr']           ?? null,
-                        'type'           => $r['type']           ?? null,
-                        'rate'           => $r['rate'],
-                        'actual_rate'    => $r['actual_rate']    ?? 0,
-                        'effective_date' => $r['effective_date'],
-                        'color'          => $r['color']          ?? null,
+                        'name'        => $r['name']        ?? null,
+                        'abbr'        => $r['abbr']         ?? null,
+                        'type'        => $r['type']         ?? null,
+                        'rate'        => $r['rate'],
+                        'actual_rate' => $r['actual_rate']  ?? 0,
+                        'color'       => $r['color']        ?? null,
                     ], fn($v) => $v !== null)
                 );
             }
 
-            $rates = FuelRate::where('station_id', $station->id)->get();
-            return $this->success('Fuel rates updated.', ['fuel_rates' => $rates]);
+            return $this->success('Fuel rates updated.', [
+                'fuel_rates' => $this->fuelRatesResponse($station->id),
+            ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
