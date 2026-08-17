@@ -107,7 +107,7 @@ class SettingsController extends Controller
     private const FUEL_META = [
         'ms'    => ['name' => 'MS Petrol',  'abbr' => 'MS',  'type' => 'Motor Spirit',      'color' => '#f59e0b'],
         'hsd'   => ['name' => 'HSD Diesel', 'abbr' => 'HSD', 'type' => 'High Speed Diesel', 'color' => '#10b981'],
-        'speed' => ['name' => 'Speed',      'abbr' => 'SP',  'type' => 'Premium Petrol',    'color' => '#3b82f6'],
+        'speed' => ['name' => 'Power',      'abbr' => 'SP',  'type' => 'Premium Petrol',    'color' => '#3b82f6'],
     ];
 
     // Builds one row per known fuel type, using the rate in effect on $date

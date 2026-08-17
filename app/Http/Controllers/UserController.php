@@ -82,6 +82,26 @@ class UserController extends Controller
         }
     }
 
+    // Public lookup used on the login screen to preview the business name for
+    // a typed email before the password is submitted. Always 200s with a
+    // possibly-null business_name rather than 404ing on unknown emails.
+    public function lookupBusinessName(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email',
+            ]);
+
+            $user = User::where('email', $request->email)->first();
+
+            return $this->success('Lookup complete', [
+                'business_name' => $user?->resolveBusinessName(),
+            ]);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
+    }
+
     public function logout(Request $request): JsonResponse
     {
         try {

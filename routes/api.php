@@ -73,6 +73,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 // User routes
 // -------------------------------------------------
 Route::post('/user/login', [UserController::class, 'login']);
+Route::middleware('throttle:20,1')->post('/user/business-name', [UserController::class, 'lookupBusinessName']);
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/logout',              [UserController::class, 'logout']);
