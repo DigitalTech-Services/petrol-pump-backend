@@ -284,7 +284,7 @@ class SettingsController extends Controller
     // ──────────────────────────────────────────────────────────────────
 
     private array $defaultNotifications = [
-        ['notif_key' => 'daily',   'icon' => '📊', 'label' => 'Daily Sales Summary',    'sub' => 'Get end-of-day summary via WhatsApp',      'enabled' => true],
+        ['notif_key' => 'daily',   'icon' => '📊', 'label' => 'Daily Sales Summary',    'sub' => 'Email the owner a summary on each day\'s sales entry', 'enabled' => true],
         ['notif_key' => 'stock',   'icon' => '🛢',  'label' => 'Low Stock Alert',         'sub' => 'Alert when fuel drops below threshold',     'enabled' => true],
         ['notif_key' => 'salary',  'icon' => '💰', 'label' => 'Monthly Salary Reminder', 'sub' => 'Remind on 28th to process payroll',         'enabled' => false],
         ['notif_key' => 'expense', 'icon' => '🧾', 'label' => 'High Expense Alert',      'sub' => 'Alert when daily expense exceeds ₹10,000',  'enabled' => true],

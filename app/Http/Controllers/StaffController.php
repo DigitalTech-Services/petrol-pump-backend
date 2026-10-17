@@ -67,7 +67,7 @@ class StaffController extends Controller
                 'phone'          => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\s-]{10,20}$/'],
                 'join_date'      => 'nullable|date',
                 'monthly_salary' => 'required|numeric|min:1',
-                'shift_hours'    => 'nullable|integer|min:1|max:24',
+                'shift_hours'    => 'nullable|integer|in:8,24',
                 'notes'          => 'nullable|string',
             ]);
 
@@ -120,7 +120,7 @@ class StaffController extends Controller
                 'phone'          => ['sometimes', 'nullable', 'string', 'max:20', 'regex:/^[0-9+\s-]{10,20}$/'],
                 'join_date'      => 'sometimes|nullable|date',
                 'monthly_salary' => 'sometimes|numeric|min:1',
-                'shift_hours'    => 'sometimes|integer|min:1|max:24',
+                'shift_hours'    => 'sometimes|integer|in:8,24',
                 'notes'          => 'sometimes|nullable|string',
             ]);
 

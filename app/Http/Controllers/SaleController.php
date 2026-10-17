@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Sale;
 use App\Models\Station;
 use App\Models\User;
+use App\Services\DailySalesSummaryNotifier;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -126,6 +127,11 @@ class SaleController extends Controller
             );
 
             $sale = Sale::create(array_merge($data, ['user_id' => $owner->id, 'station_id' => $owner->station_id]));
+
+            // Email the owner the day's summary. Sent inline (not after the response)
+            // because serverless hosts like Vercel may stop the process once the
+            // response is out. Failures are caught and logged — the sale still saves.
+            app(DailySalesSummaryNotifier::class)->send($sale, $owner);
 
             return $this->success('Sale created.', ['sale' => $sale], 201);
         } catch (\Exception $e) {

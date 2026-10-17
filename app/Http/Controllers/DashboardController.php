@@ -426,10 +426,15 @@ class DashboardController extends Controller
 
     private function inr(float $val): string
     {
-        if ($val >= 10_000_000) return '₹' . number_format($val / 10_000_000, 2) . 'Cr';
-        if ($val >= 100_000)    return '₹' . number_format($val / 100_000,    2) . 'L';
-        if ($val >= 1_000)      return '₹' . number_format((int)round($val));
-        return '₹' . number_format($val, 2);
+        // Compact Indian units (K / L / Cr), matching the frontend's fmtCompact
+        $sign = $val < 0 ? '−' : '';
+        $abs  = abs($val);
+        $short = fn(float $div, string $unit) => $sign . '₹' . rtrim(rtrim(number_format($abs / $div, 2, '.', ''), '0'), '.') . $unit;
+
+        if (round($abs / 10_000_000, 2) >= 1) return $short(10_000_000, 'Cr');
+        if (round($abs / 100_000, 2)    >= 1) return $short(100_000,    'L');
+        if ($abs >= 1_000)                    return $short(1_000,      'K');
+        return $sign . '₹' . number_format($abs);
     }
 
     private function num(float $val): string

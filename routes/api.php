@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CreditController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\MeterReadingController;
 use App\Http\Controllers\ReportsController;
@@ -151,6 +152,29 @@ Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
     Route::get('/fuel',    [ReportsController::class, 'fuel']);
     Route::get('/pnl',     [ReportsController::class, 'pnl']);
     Route::get('/staff',   [ReportsController::class, 'staff']);
+});
+
+// -------------------------------------------------
+// Credit routes (fuel given on credit)
+// Reads: owner + manager — owner sees all stations (or ?station_id=), manager
+// sees their own station. Writes (customers, entries, mark as paid): manager only.
+// -------------------------------------------------
+Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('credit')->group(function () {
+    Route::get('/summary',          [CreditController::class, 'summary']);
+    Route::get('/customers',        [CreditController::class, 'customers']);
+    Route::get('/customers/{id}',   [CreditController::class, 'customerHistory']);
+    Route::get('/entries',          [CreditController::class, 'entries']);
+});
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('credit')->group(function () {
+    Route::post('/customers',                [CreditController::class, 'storeCustomer']);
+    Route::put('/customers/{id}',            [CreditController::class, 'updateCustomer']);
+    Route::delete('/customers/{id}',         [CreditController::class, 'destroyCustomer']);
+    Route::post('/customers/{id}/pay-all',   [CreditController::class, 'markAllPaid']);
+    Route::post('/entries',                  [CreditController::class, 'storeEntry']);
+    Route::put('/entries/{id}',              [CreditController::class, 'updateEntry']);
+    Route::delete('/entries/{id}',           [CreditController::class, 'destroyEntry']);
+    Route::post('/entries/{id}/pay',         [CreditController::class, 'markPaid']);
+    Route::post('/entries/{id}/unpay',       [CreditController::class, 'markUnpaid']);
 });
 
 // -------------------------------------------------

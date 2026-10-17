@@ -165,6 +165,7 @@ class StaffAttendanceController extends Controller
                 'records.*.status'     => 'required|in:present,absent',
                 'records.*.in_time'    => 'nullable|date_format:H:i,H:i:s',
                 'records.*.out_time'   => 'nullable|date_format:H:i,H:i:s',
+                'records.*.total_hours'=> 'nullable|integer|in:8,24',   // client rule: 8h or 24h shifts only
                 'records.*.notes'      => 'nullable|string|max:255',
             ]);
 
@@ -176,7 +177,11 @@ class StaffAttendanceController extends Controller
                 $staff = Staff::where('user_id', $userId)->find($rec['staff_id']);
                 if (!$staff) { $skipped++; continue; }
 
-                $totalHours = $this->calcHours($rec['in_time'] ?? null, $rec['out_time'] ?? null);
+                // Prefer the explicit shift length — in/out alone can't express a
+                // 24h shift (same clock time) or one that ends after midnight.
+                $totalHours = $rec['status'] === 'present' && isset($rec['total_hours'])
+                    ? (float) $rec['total_hours']
+                    : $this->calcHours($rec['in_time'] ?? null, $rec['out_time'] ?? null);
 
                 $record = StaffAttendance::updateOrCreate(
                     ['staff_id' => $rec['staff_id'], 'date' => $data['date']],
