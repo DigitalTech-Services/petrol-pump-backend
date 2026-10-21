@@ -263,8 +263,9 @@ class CreditController extends Controller
             'credit_customer_id' => ['required', 'integer', Rule::exists('credit_customers', 'id')->where('user_id', $owner->id)],
             'date'               => 'required|date|before_or_equal:today',
             'fuel_type'          => 'required|in:' . implode(',', CreditEntry::FUEL_TYPES),
-            'litres'             => 'required|numeric|gt:0',
-            'rate'               => 'required|numeric|gt:0',
+            'amount'             => 'required|numeric|gt:0',
+            'litres'             => 'nullable|numeric|gt:0',
+            'rate'               => 'nullable|numeric|gt:0',
             'vehicle_number'     => 'nullable|string|max:30',
             'notes'              => 'nullable|string',
         ];
@@ -285,7 +286,7 @@ class CreditController extends Controller
             $entry = CreditEntry::create(array_merge($data, [
                 'user_id'    => $owner->id,
                 'station_id' => $owner->station_id,
-                'amount'     => round($data['litres'] * $data['rate'], 2),   // computed server-side
+                'amount'     => round($data['amount'], 2),
                 'status'     => 'pending',
             ]));
 
@@ -297,27 +298,20 @@ class CreditController extends Controller
         }
     }
 
-    // PUT /credit/entries/{id} — only while unpaid
-    public function updateEntry(Request $request, int $id): JsonResponse
+    // GET /credit/total-for-date?date=YYYY-MM-DD — all credit given on one day
+    // (paid or not), used to prefill Credit Sale on the New Sale Entry form.
+    public function totalForDate(Request $request): JsonResponse
     {
         try {
-            $owner = $this->owner($request);
-            $entry = CreditEntry::where('user_id', $owner->id)->findOrFail($id);
+            [$col, $ids] = $this->scope($request);
 
-            if ($entry->status === 'paid') {
-                return $this->error('A paid credit entry cannot be edited. Mark it as unpaid first.', 422);
-            }
+            $data = $request->validate([
+                'date' => 'required|date',
+            ]);
 
-            $data = $request->validate($this->entryRules($owner), self::ENTRY_MESSAGES);
-            $data['amount'] = round($data['litres'] * $data['rate'], 2);
+            $total = CreditEntry::whereIn($col, $ids)->whereDate('date', $data['date'])->sum('amount');
 
-            $entry->update($data);
-
-            return $this->success('Credit entry updated.', ['entry' => $entry->fresh()->load('customer:id,name,mobile')]);
-        } catch (ValidationException $e) {
-            return $this->validationError($e);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
-            return $this->error('Credit entry not found.', 404);
+            return $this->success('Total fetched.', ['total' => round((float) $total, 2)]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }

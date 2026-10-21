@@ -164,6 +164,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('credit')->gro
     Route::get('/customers',        [CreditController::class, 'customers']);
     Route::get('/customers/{id}',   [CreditController::class, 'customerHistory']);
     Route::get('/entries',          [CreditController::class, 'entries']);
+    Route::get('/total-for-date',   [CreditController::class, 'totalForDate']);
 });
 Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('credit')->group(function () {
     Route::post('/customers',                [CreditController::class, 'storeCustomer']);
@@ -171,7 +172,6 @@ Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('credit')->group(fu
     Route::delete('/customers/{id}',         [CreditController::class, 'destroyCustomer']);
     Route::post('/customers/{id}/pay-all',   [CreditController::class, 'markAllPaid']);
     Route::post('/entries',                  [CreditController::class, 'storeEntry']);
-    Route::put('/entries/{id}',              [CreditController::class, 'updateEntry']);
     Route::delete('/entries/{id}',           [CreditController::class, 'destroyEntry']);
     Route::post('/entries/{id}/pay',         [CreditController::class, 'markPaid']);
     Route::post('/entries/{id}/unpay',       [CreditController::class, 'markUnpaid']);
