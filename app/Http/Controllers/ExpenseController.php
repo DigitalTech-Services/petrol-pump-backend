@@ -70,7 +70,7 @@ class ExpenseController extends Controller
 
             return $this->success('Expenses fetched.', ['expenses' => $query->get()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -92,7 +92,7 @@ class ExpenseController extends Controller
 
             return $this->success('Expense added.', ['expense' => $expense], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -105,7 +105,7 @@ class ExpenseController extends Controller
 
             return $this->success('Expense fetched.', ['expense' => $expense]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -128,7 +128,7 @@ class ExpenseController extends Controller
 
             return $this->success('Expense updated.', ['expense' => $expense->fresh()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -142,7 +142,7 @@ class ExpenseController extends Controller
 
             return $this->success('Expense deleted.');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -189,7 +189,7 @@ class ExpenseController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -214,7 +214,7 @@ class ExpenseController extends Controller
 
             return $this->success('Total fetched.', ['total' => round((float) $total, 2)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

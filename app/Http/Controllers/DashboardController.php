@@ -172,7 +172,7 @@ class DashboardController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -223,7 +223,7 @@ class DashboardController extends Controller
                 'avgMsPerDay'     => $this->num($avgMs) . ' L',
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -265,7 +265,7 @@ class DashboardController extends Controller
 
             return $this->success('Daily trend fetched.', $trend);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -298,7 +298,7 @@ class DashboardController extends Controller
 
             return $this->success('Fuel mix fetched.', $mix);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -320,7 +320,7 @@ class DashboardController extends Controller
                 'card'     => (float)round($sales->sum('card'),     2),
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -336,7 +336,7 @@ class DashboardController extends Controller
                 $this->stockLevelsData($scopeColumn, $scopeValues, $year, $month)
             );
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 

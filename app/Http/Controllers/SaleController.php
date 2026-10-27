@@ -75,7 +75,7 @@ class SaleController extends Controller
 
             return $this->success('Sales fetched.', ['sales' => $sales->values()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -135,7 +135,7 @@ class SaleController extends Controller
 
             return $this->success('Sale created.', ['sale' => $sale], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -148,7 +148,7 @@ class SaleController extends Controller
 
             return $this->success('Sale fetched.', ['sale' => $sale]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -213,7 +213,7 @@ class SaleController extends Controller
 
             return $this->success('Sale updated.', ['sale' => $sale->fresh()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -227,7 +227,7 @@ class SaleController extends Controller
 
             return $this->success('Sale deleted.');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -267,7 +267,7 @@ class SaleController extends Controller
 
             return $this->success('Summary fetched.', ['summary' => $summary]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -300,7 +300,7 @@ class SaleController extends Controller
 
             return $this->success('Monthly sales fetched.', ['monthly' => $monthly]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 

@@ -114,7 +114,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('settings')->g
     Route::get('/nozzles',     [SettingsController::class, 'getNozzles']);
 });
 
-Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('settings')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->prefix('settings')->group(function () {
     // Station details
     Route::put('/',                    [SettingsController::class, 'updateStation']);
 
@@ -125,8 +125,11 @@ Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('settings')->group(
     Route::post('/nozzles',            [SettingsController::class, 'storeNozzle']);
     Route::put('/nozzles/{id}',        [SettingsController::class, 'updateNozzle']);
     Route::delete('/nozzles/{id}',     [SettingsController::class, 'destroyNozzle']);
+});
 
-    // Notification preferences (manager-personal, not station data)
+// Notification preferences are manager-personal, not station data — allowed
+// even before the manager is assigned a station.
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('settings')->group(function () {
     Route::get('/notifications',       [SettingsController::class, 'getNotifications']);
     Route::put('/notifications',       [SettingsController::class, 'updateNotifications']);
 });
@@ -167,7 +170,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('credit')->gro
     Route::get('/entries',          [CreditController::class, 'entries']);
     Route::get('/total-for-date',   [CreditController::class, 'totalForDate']);
 });
-Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('credit')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->prefix('credit')->group(function () {
     Route::post('/customers',                [CreditController::class, 'storeCustomer']);
     Route::put('/customers/{id}',            [CreditController::class, 'updateCustomer']);
     Route::delete('/customers/{id}',         [CreditController::class, 'destroyCustomer']);
@@ -190,7 +193,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('expenses')->g
     Route::get('/',                [ExpenseController::class, 'index']);
     Route::get('/{id}',            [ExpenseController::class, 'show']);
 });
-Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('expenses')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->prefix('expenses')->group(function () {
     Route::post('/',          [ExpenseController::class, 'store']);
     Route::put('/{id}',       [ExpenseController::class, 'update']);
     Route::delete('/{id}',    [ExpenseController::class, 'destroy']);
@@ -208,7 +211,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('accounts')->g
     Route::get('/charges',     [AccountsController::class, 'charges']);
     Route::get('/taxes',       [AccountsController::class, 'taxes']);
 });
-Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('accounts')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->prefix('accounts')->group(function () {
     Route::post('/statements',         [AccountsController::class, 'storeStatement']);
     Route::put('/statements/{id}',     [AccountsController::class, 'updateStatement']);
     Route::delete('/statements/{id}',  [AccountsController::class, 'destroyStatement']);
@@ -231,7 +234,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('sales')->grou
     Route::get('/',        [SaleController::class, 'index']);
     Route::get('/{id}',    [SaleController::class, 'show']);
 });
-Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('sales')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->prefix('sales')->group(function () {
     Route::post('/',       [SaleController::class, 'store']);
     Route::put('/{id}',    [SaleController::class, 'update']);
     Route::delete('/{id}', [SaleController::class, 'destroy']);
@@ -249,7 +252,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('stock')->grou
     Route::get('/',         [StockController::class, 'index']);
     Route::get('/{id}',     [StockController::class, 'show']);
 });
-Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('stock')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->prefix('stock')->group(function () {
     Route::post('/',        [StockController::class, 'store']);
     Route::put('/{id}',     [StockController::class, 'update']);
     Route::delete('/{id}',  [StockController::class, 'destroy']);
@@ -267,7 +270,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('meters')->gro
     Route::get('/',              [MeterReadingController::class, 'index']);
     Route::get('/{id}',          [MeterReadingController::class, 'show']);
 });
-Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('meters')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->prefix('meters')->group(function () {
     Route::post('/',       [MeterReadingController::class, 'store']);
     Route::put('/{id}',    [MeterReadingController::class, 'update']);
     Route::delete('/{id}', [MeterReadingController::class, 'destroy']);
@@ -283,7 +286,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('transactions'
     Route::get('/',        [TransactionController::class, 'index']);
     Route::get('/{id}',    [TransactionController::class, 'show']);
 });
-Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('transactions')->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->prefix('transactions')->group(function () {
     Route::post('/',       [TransactionController::class, 'store']);
     Route::put('/{id}',    [TransactionController::class, 'update']);
     Route::delete('/{id}', [TransactionController::class, 'destroy']);
@@ -306,7 +309,7 @@ Route::middleware(['auth:sanctum', 'role:user,sub_user'])->group(function () {
     Route::get('/staff/{id}', [StaffController::class, 'show']);
 });
 
-Route::middleware(['auth:sanctum', 'role:sub_user'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:sub_user', 'station.assigned'])->group(function () {
 
     // ── Advances ──────────────────────────────────
     Route::post('/staff/advances', [StaffController::class, 'addAdvance']);

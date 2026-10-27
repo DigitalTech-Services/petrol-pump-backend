@@ -63,7 +63,7 @@ class SettingsController extends Controller
                 'station' => $station->only(['id', 'name', 'dealer_code', 'address', 'city', 'state', 'gst', 'pan', 'phone']),
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -92,7 +92,7 @@ class SettingsController extends Controller
                 'station' => $station->fresh()->only(['id', 'name', 'dealer_code', 'address', 'city', 'state', 'gst', 'pan', 'phone']),
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -145,7 +145,7 @@ class SettingsController extends Controller
                 'fuel_rates' => $this->fuelRatesResponse($station->id, $request->query('date')),
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -192,7 +192,7 @@ class SettingsController extends Controller
                 'fuel_rates' => $this->fuelRatesResponse($station->id),
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -211,7 +211,7 @@ class SettingsController extends Controller
 
             return $this->success('Nozzles fetched.', ['nozzles' => $nozzles]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -235,7 +235,7 @@ class SettingsController extends Controller
 
             return $this->success('Nozzle added.', ['nozzle' => $nozzle], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -259,7 +259,7 @@ class SettingsController extends Controller
 
             return $this->success('Nozzle updated.', ['nozzle' => $nozzle->fresh()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -275,7 +275,7 @@ class SettingsController extends Controller
 
             return $this->success('Nozzle removed.');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -308,7 +308,7 @@ class SettingsController extends Controller
                 'notifications' => $notifs,
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -342,7 +342,7 @@ class SettingsController extends Controller
             $notifs = NotificationPreference::where('user_id', $owner->id)->get();
             return $this->success('Notification preferences updated.', ['notifications' => $notifs]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

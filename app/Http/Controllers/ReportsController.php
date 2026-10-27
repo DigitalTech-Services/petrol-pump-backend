@@ -124,7 +124,7 @@ class ReportsController extends Controller
                 'daily'      => $daily,
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -183,7 +183,7 @@ class ReportsController extends Controller
                 'daily' => $dailyByFuel,
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -230,7 +230,7 @@ class ReportsController extends Controller
                 'total_expenses' => round($expenses->sum('amount'), 2),
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -270,7 +270,7 @@ class ReportsController extends Controller
 
             return $this->success('Staff report fetched.', ['staff' => $staff]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

@@ -53,7 +53,7 @@ class StaffController extends Controller
 
             return $this->success('Staff fetched!', ['staff' => $staff]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -87,7 +87,7 @@ class StaffController extends Controller
 
             return $this->success('Staff created!', ['staff' => $this->formatStaff($staff, now()->format('Y-m'))], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -104,7 +104,7 @@ class StaffController extends Controller
 
             return $this->success('Staff fetched!', ['staff' => $this->formatStaff($staff, $month)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -132,7 +132,7 @@ class StaffController extends Controller
 
             return $this->success('Staff updated!', ['staff' => $this->formatStaff($staff, now()->format('Y-m'))]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -145,7 +145,7 @@ class StaffController extends Controller
 
             return $this->success('Staff deleted!');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -180,7 +180,7 @@ class StaffController extends Controller
 
             return $this->success('Advances fetched!', ['advances' => $advances]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -222,7 +222,7 @@ class StaffController extends Controller
                 ],
             ], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 

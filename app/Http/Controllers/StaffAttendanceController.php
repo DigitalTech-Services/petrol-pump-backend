@@ -106,7 +106,7 @@ class StaffAttendanceController extends Controller
 
             return $this->success('Attendance fetched!', ['attendance' => $records]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -149,7 +149,7 @@ class StaffAttendanceController extends Controller
 
             return $this->success('Attendance recorded!', ['attendance' => $this->formatRecord($record)], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -205,7 +205,7 @@ class StaffAttendanceController extends Controller
                 ['saved_count' => count($saved), 'skipped' => $skipped]
             );
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -221,7 +221,7 @@ class StaffAttendanceController extends Controller
 
             return $this->success('Record fetched!', ['attendance' => $this->formatRecord($record)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -250,7 +250,7 @@ class StaffAttendanceController extends Controller
 
             return $this->success('Attendance updated!', ['attendance' => $this->formatRecord($record)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -264,7 +264,7 @@ class StaffAttendanceController extends Controller
 
             return $this->success('Attendance record deleted!');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -321,7 +321,7 @@ class StaffAttendanceController extends Controller
                 'summary' => $summary,
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

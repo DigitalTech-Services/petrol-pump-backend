@@ -69,7 +69,7 @@ class TransactionController extends Controller
 
             return $this->success('Transactions fetched.', ['transactions' => $query->get()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -92,7 +92,7 @@ class TransactionController extends Controller
 
             return $this->success('Transaction added.', ['transaction' => $tx], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -105,7 +105,7 @@ class TransactionController extends Controller
 
             return $this->success('Transaction fetched.', ['transaction' => $tx]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -129,7 +129,7 @@ class TransactionController extends Controller
 
             return $this->success('Transaction updated.', ['transaction' => $tx->fresh()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -143,7 +143,7 @@ class TransactionController extends Controller
 
             return $this->success('Transaction deleted.');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -218,7 +218,7 @@ class TransactionController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

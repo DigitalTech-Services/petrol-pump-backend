@@ -156,7 +156,7 @@ class AccountsController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -179,7 +179,7 @@ class AccountsController extends Controller
 
             return $this->success('Statements fetched.', ['statements' => $query->get()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -249,7 +249,7 @@ class AccountsController extends Controller
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -271,7 +271,7 @@ class AccountsController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Statement not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -285,7 +285,7 @@ class AccountsController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Statement not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -311,7 +311,7 @@ class AccountsController extends Controller
 
             return $this->success('Charges fetched.', ['charges' => $query->get()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -343,7 +343,7 @@ class AccountsController extends Controller
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -360,7 +360,7 @@ class AccountsController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Bank charge not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -374,7 +374,7 @@ class AccountsController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Bank charge not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -397,7 +397,7 @@ class AccountsController extends Controller
 
             return $this->success('Tax payments fetched.', ['taxes' => $query->get()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -430,7 +430,7 @@ class AccountsController extends Controller
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -447,7 +447,7 @@ class AccountsController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Tax payment not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -461,7 +461,7 @@ class AccountsController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Tax payment not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

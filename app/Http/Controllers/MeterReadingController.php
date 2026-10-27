@@ -59,7 +59,7 @@ class MeterReadingController extends Controller
 
             return $this->success('Meter readings fetched.', ['readings' => $readings]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -113,7 +113,7 @@ class MeterReadingController extends Controller
 
             return $this->success('Meter reading added.', ['reading' => $reading], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -128,7 +128,7 @@ class MeterReadingController extends Controller
 
             return $this->success('Meter reading fetched.', ['reading' => $reading]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -174,7 +174,7 @@ class MeterReadingController extends Controller
 
             return $this->success('Meter reading updated.', ['reading' => $reading->fresh()->load('nozzleReadings')]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -188,7 +188,7 @@ class MeterReadingController extends Controller
 
             return $this->success('Meter reading deleted.');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -212,7 +212,7 @@ class MeterReadingController extends Controller
 
             return $this->success('Nozzles fetched.', ['nozzles' => $query->orderBy('nozzle_id')->get()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -241,7 +241,7 @@ class MeterReadingController extends Controller
                 'closing' => $closing,
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -288,7 +288,7 @@ class MeterReadingController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

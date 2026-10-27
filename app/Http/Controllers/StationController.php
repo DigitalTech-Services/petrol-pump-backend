@@ -43,7 +43,7 @@ class StationController extends Controller
 
             return $this->success('Stations fetched.', ['stations' => $stations->values()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -71,7 +71,7 @@ class StationController extends Controller
 
             return $this->success('Station created.', ['station' => $this->present($station)], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -96,7 +96,7 @@ class StationController extends Controller
 
             return $this->success('Station updated.', ['station' => $this->present($station->fresh())]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -114,7 +114,7 @@ class StationController extends Controller
 
             return $this->success('Station deleted.');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

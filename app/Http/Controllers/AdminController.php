@@ -52,7 +52,7 @@ class AdminController extends Controller
                 'admin' => ['id' => $admin->id, 'username' => $admin->username],
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -63,7 +63,7 @@ class AdminController extends Controller
 
             return $this->success('Logged out successfully');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -74,7 +74,7 @@ class AdminController extends Controller
 
             return $this->success('Users fetched', ['users' => $users]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -100,7 +100,7 @@ class AdminController extends Controller
 
             return $this->success('User created', ['user' => $user->only($this->userFields)], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -114,7 +114,7 @@ class AdminController extends Controller
 
             return $this->success('User fetched', ['user' => $user->only($this->userFields)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -137,7 +137,7 @@ class AdminController extends Controller
 
             return $this->success('User updated', ['user' => $user->fresh()->only($this->userFields)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -153,7 +153,7 @@ class AdminController extends Controller
 
             return $this->success('User deleted');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

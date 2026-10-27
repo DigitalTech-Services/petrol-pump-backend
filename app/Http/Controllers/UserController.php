@@ -78,7 +78,7 @@ class UserController extends Controller
                 'user' => $user->type === 'sub_user' ? $this->presentSubUser($user) : $this->presentUser($user),
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -98,7 +98,7 @@ class UserController extends Controller
                 'business_name' => $user?->resolveBusinessName(),
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -109,16 +109,18 @@ class UserController extends Controller
 
             return $this->success('Logged out successfully');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
     public function profile(Request $request): JsonResponse
     {
         try {
-            return $this->success('Profile fetched!', $this->presentUser($request->user()));
+            $user = $request->user();
+
+            return $this->success('Profile fetched!', $user->type === 'sub_user' ? $this->presentSubUser($user) : $this->presentUser($user));
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -142,7 +144,7 @@ class UserController extends Controller
 
             return $this->success('Profile updated!', $this->presentUser($user->fresh()));
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -157,7 +159,7 @@ class UserController extends Controller
 
             return $this->success('Users fetched!', ['sub_users' => $subUsers]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -198,7 +200,7 @@ class UserController extends Controller
 
             return $this->success('User created!', ['sub_user' => $this->presentSubUser($subUser)], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -212,7 +214,7 @@ class UserController extends Controller
 
             return $this->success('Users fetched!', ['sub_user' => $this->presentSubUser($subUser)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -244,7 +246,7 @@ class UserController extends Controller
 
             return $this->success('User account updated!', ['sub_user' => $this->presentSubUser($subUser->fresh('station'))]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -259,7 +261,7 @@ class UserController extends Controller
 
             return $this->success('User Account deleted!');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

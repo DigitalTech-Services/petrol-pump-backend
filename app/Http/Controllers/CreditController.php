@@ -109,7 +109,7 @@ class CreditController extends Controller
 
             return $this->success('Credit customers fetched.', ['customers' => $customers]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -138,7 +138,7 @@ class CreditController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Credit customer not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -181,7 +181,7 @@ class CreditController extends Controller
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -204,7 +204,7 @@ class CreditController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Credit customer not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -225,7 +225,7 @@ class CreditController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Credit customer not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -253,7 +253,7 @@ class CreditController extends Controller
 
             return $this->success('Credit entries fetched.', ['entries' => $query->get()]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -294,7 +294,7 @@ class CreditController extends Controller
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -313,7 +313,7 @@ class CreditController extends Controller
 
             return $this->success('Total fetched.', ['total' => round((float) $total, 2)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -334,7 +334,7 @@ class CreditController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Credit entry not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -375,7 +375,7 @@ class CreditController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Credit entry not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -392,7 +392,7 @@ class CreditController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Credit entry not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -424,7 +424,7 @@ class CreditController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->error('Credit customer not found.', 404);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -509,7 +509,7 @@ class CreditController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }

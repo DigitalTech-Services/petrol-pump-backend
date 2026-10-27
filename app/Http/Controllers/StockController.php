@@ -113,7 +113,7 @@ class StockController extends Controller
 
             return $this->success('Stock entries fetched.', ['entries' => $rows, 'threshold_pct' => self::VARIATION_ALERT_PCT]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -154,7 +154,7 @@ class StockController extends Controller
 
             return $this->success('Stock entry added.', ['entry' => $row, 'threshold_pct' => self::VARIATION_ALERT_PCT], 201);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -169,7 +169,7 @@ class StockController extends Controller
 
             return $this->success('Stock entry fetched.', ['entry' => $this->present($entry, $saleVolumes)]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -205,7 +205,7 @@ class StockController extends Controller
 
             return $this->success('Stock entry updated.', ['entry' => $row, 'threshold_pct' => self::VARIATION_ALERT_PCT]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -219,7 +219,7 @@ class StockController extends Controller
 
             return $this->success('Stock entry deleted.');
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -255,7 +255,7 @@ class StockController extends Controller
                 'threshold_pct' => self::VARIATION_ALERT_PCT,
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -300,7 +300,7 @@ class StockController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 
@@ -342,7 +342,7 @@ class StockController extends Controller
 
             return $this->success('Tankwise stock fetched.', ['tankwise' => $result]);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+            return $this->exceptionError($e);
         }
     }
 }
