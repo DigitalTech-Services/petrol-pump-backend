@@ -6,6 +6,7 @@ use App\Models\Sale;
 use App\Models\Station;
 use App\Models\StockEntry;
 use App\Models\User;
+use App\Services\StockVariationNotifier;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,9 @@ class StockController extends Controller
     use ApiResponse;
 
     private const FUEL_TYPES = ['MS', 'HSD', 'Speed'];
+
+    // Variation beyond this % of the day's sale is flagged and emailed to the owner
+    public const VARIATION_ALERT_PCT = 0.06;
 
     private const SALE_COLUMN = [
         'MS'    => 'ms_volume',
@@ -66,6 +70,9 @@ class StockController extends Controller
         $sale   = (float) $sale;
         $variation = round($sale - ($net - $entry->closing), 2);
 
+        // Without a sale figure the % is meaningless (variation = whole stock movement)
+        $pct = $sale > 0 ? round(abs($variation) / $sale * 100, 3) : null;
+
         return [
             'id'        => $entry->id,
             'date'      => $entry->date->format('Y-m-d'),
@@ -76,6 +83,8 @@ class StockController extends Controller
             'close'     => $entry->closing,
             'sale'      => round($sale, 2),
             'variation' => $variation,
+            'variation_pct'   => $pct,
+            'variation_alert' => $pct !== null && $pct > self::VARIATION_ALERT_PCT,
             'remarks'   => $entry->remarks,
         ];
     }
@@ -102,7 +111,7 @@ class StockController extends Controller
             $saleVolumes = $this->saleVolumesByDay($col, $ids, $month, $fuelType);
             $rows = $entries->map(fn($e) => $this->present($e, $saleVolumes))->values();
 
-            return $this->success('Stock entries fetched.', ['entries' => $rows]);
+            return $this->success('Stock entries fetched.', ['entries' => $rows, 'threshold_pct' => self::VARIATION_ALERT_PCT]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -136,8 +145,14 @@ class StockController extends Controller
             $entry = StockEntry::create(array_merge($data, ['user_id' => $owner->id, 'station_id' => $owner->station_id]));
 
             $saleVolumes = $this->saleVolumesByDay('user_id', [$owner->id], substr($data['date'], 0, 7), $data['fuel_type']);
+            $row         = $this->present($entry, $saleVolumes);
 
-            return $this->success('Stock entry added.', ['entry' => $this->present($entry, $saleVolumes)], 201);
+            // Sent inline like the daily sales summary (serverless hosts may stop after the response)
+            if ($row['variation_alert']) {
+                app(StockVariationNotifier::class)->send($row, $owner, self::VARIATION_ALERT_PCT);
+            }
+
+            return $this->success('Stock entry added.', ['entry' => $row, 'threshold_pct' => self::VARIATION_ALERT_PCT], 201);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -175,12 +190,20 @@ class StockController extends Controller
                 'remarks'     => 'sometimes|nullable|string|max:255',
             ]);
 
+            $before = $this->present($entry, $this->saleVolumesByDay('user_id', [$owner->id], $entry->date->format('Y-m'), $entry->fuel_type));
+
             $entry->update($data);
             $entry = $entry->fresh();
 
             $saleVolumes = $this->saleVolumesByDay('user_id', [$owner->id], $entry->date->format('Y-m'), $entry->fuel_type);
+            $row         = $this->present($entry, $saleVolumes);
 
-            return $this->success('Stock entry updated.', ['entry' => $this->present($entry, $saleVolumes)]);
+            // Only email when the edit changes the variation — re-saving remarks shouldn't re-alert
+            if ($row['variation_alert'] && $row['variation'] !== $before['variation']) {
+                app(StockVariationNotifier::class)->send($row, $owner, self::VARIATION_ALERT_PCT);
+            }
+
+            return $this->success('Stock entry updated.', ['entry' => $row, 'threshold_pct' => self::VARIATION_ALERT_PCT]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }
@@ -195,6 +218,42 @@ class StockController extends Controller
             $entry->delete();
 
             return $this->success('Stock entry deleted.');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
+    }
+
+    // GET /stock/last-closing?fuel_type=MS&before=YYYY-MM-DD — closing of the most
+    // recent entry before that date (any month), used to prefill the next opening.
+    // Also returns the sale already recorded for that date, so the form can warn
+    // about variation live when "Actual Sale" is left blank.
+    public function lastClosing(Request $request): JsonResponse
+    {
+        try {
+            [$col, $ids] = $this->scope($request);
+            $fuelType = $request->query('fuel_type', 'MS');
+            $before   = $request->query('before', now()->format('Y-m-d'));
+
+            if (!in_array($fuelType, self::FUEL_TYPES, true)) {
+                return $this->error('Invalid fuel_type.', 422);
+            }
+
+            $last = StockEntry::whereIn($col, $ids)
+                ->where('fuel_type', $fuelType)
+                ->whereDate('date', '<', $before)
+                ->orderBy('date', 'desc')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            // Same lookup present() uses, so the live warning matches what gets saved
+            $recordedSale = $this->saleVolumesByDay($col, $ids, substr($before, 0, 7), $fuelType)->get($before, 0);
+
+            return $this->success('Last closing fetched.', [
+                'date'          => $last?->date?->format('Y-m-d'),
+                'closing'       => $last ? (float) $last->closing : null,
+                'recorded_sale' => round((float) $recordedSale, 2),
+                'threshold_pct' => self::VARIATION_ALERT_PCT,
+            ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
         }

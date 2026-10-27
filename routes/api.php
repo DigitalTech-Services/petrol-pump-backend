@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CreditController;
@@ -196,6 +197,30 @@ Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('expenses')->group(
 });
 
 // -------------------------------------------------
+// Accounts / CA routes (bank statements, bank charges, tax payments)
+// Reads: owner + manager — owner sees all stations (or ?station_id=), manager
+// sees their own station. Writes: manager only.
+// -------------------------------------------------
+Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('accounts')->group(function () {
+    Route::get('/options',     [AccountsController::class, 'options']);
+    Route::get('/summary',     [AccountsController::class, 'summary']);
+    Route::get('/statements',  [AccountsController::class, 'statements']);
+    Route::get('/charges',     [AccountsController::class, 'charges']);
+    Route::get('/taxes',       [AccountsController::class, 'taxes']);
+});
+Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('accounts')->group(function () {
+    Route::post('/statements',         [AccountsController::class, 'storeStatement']);
+    Route::put('/statements/{id}',     [AccountsController::class, 'updateStatement']);
+    Route::delete('/statements/{id}',  [AccountsController::class, 'destroyStatement']);
+    Route::post('/charges',            [AccountsController::class, 'storeCharge']);
+    Route::put('/charges/{id}',        [AccountsController::class, 'updateCharge']);
+    Route::delete('/charges/{id}',     [AccountsController::class, 'destroyCharge']);
+    Route::post('/taxes',              [AccountsController::class, 'storeTax']);
+    Route::put('/taxes/{id}',          [AccountsController::class, 'updateTax']);
+    Route::delete('/taxes/{id}',       [AccountsController::class, 'destroyTax']);
+});
+
+// -------------------------------------------------
 // Sale routes
 // Reads: owner + manager. Writes: manager only.
 // summary/monthly registered before {id} to avoid wildcard match
@@ -215,11 +240,12 @@ Route::middleware(['auth:sanctum', 'role:sub_user'])->prefix('sales')->group(fun
 // -------------------------------------------------
 // Stock routes
 // Reads: owner + manager. Writes: manager only.
-// summary/tankwise registered before {id} to avoid wildcard match
+// summary/tankwise/last-closing registered before {id} to avoid wildcard match
 // -------------------------------------------------
 Route::middleware(['auth:sanctum', 'role:user,sub_user'])->prefix('stock')->group(function () {
     Route::get('/summary',  [StockController::class, 'summary']);
     Route::get('/tankwise', [StockController::class, 'tankwise']);
+    Route::get('/last-closing', [StockController::class, 'lastClosing']);
     Route::get('/',         [StockController::class, 'index']);
     Route::get('/{id}',     [StockController::class, 'show']);
 });

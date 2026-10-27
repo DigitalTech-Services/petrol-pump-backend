@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BankCharge;
 use App\Models\Expense;
 use App\Models\FuelRate;
 use App\Models\Sale;
@@ -12,6 +13,7 @@ use App\Models\StockEntry;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -89,6 +91,12 @@ class DashboardController extends Controller
             $staffPayroll = $this->staffPayrollTotal($scopeColumn, $scopeValues, $year, $month);
             $profitLoss   = $this->profitLossData($sales);
 
+            // Bank charges (Bank & Tax → Bank Charges), including the GST levied on them
+            $bankCharges  = (float) BankCharge::whereIn($scopeColumn, $scopeValues)
+                ->whereYear('date', $year)
+                ->whereMonth('date', $month)
+                ->sum(DB::raw('amount + gst_amount'));
+
             $kpis = [
                 'totalRevenue'    => $this->inr($totalRev),
                 'msSold'          => $this->num($totalMs),
@@ -155,11 +163,12 @@ class DashboardController extends Controller
                     // Actual profit = fuel margin − expenses (Expense ledger, same source
                     // as the Total Expenses KPI) − staff payroll (gross, hours × rate;
                     // advances are just an early payout of this same earned salary, not
-                    // an extra cost, so they aren't subtracted again here).
-                    'total'         => round($profitLoss['total'] - $totalExp - $staffPayroll, 2),
+                    // an extra cost, so they aren't subtracted again here) − bank charges.
+                    'total'         => round($profitLoss['total'] - $totalExp - $staffPayroll - $bankCharges, 2),
                     'fuel_margin'   => $profitLoss['total'],
                     'expenses'      => round($totalExp, 2),
                     'staff_payroll' => round($staffPayroll, 2),
+                    'bank_charges'  => round($bankCharges, 2),
                 ],
             ]);
         } catch (\Exception $e) {

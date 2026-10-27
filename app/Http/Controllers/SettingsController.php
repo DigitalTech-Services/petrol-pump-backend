@@ -285,6 +285,7 @@ class SettingsController extends Controller
 
     private array $defaultNotifications = [
         ['notif_key' => 'daily',   'icon' => '📊', 'label' => 'Daily Sales Summary',    'sub' => 'Email the owner a summary on each day\'s sales entry', 'enabled' => true],
+        ['notif_key' => 'stock_variation', 'icon' => '⚠️', 'label' => 'Stock Variation Alert', 'sub' => 'Email the owner when stock variation exceeds 0.06% of sale', 'enabled' => true],
         ['notif_key' => 'stock',   'icon' => '🛢',  'label' => 'Low Stock Alert',         'sub' => 'Alert when fuel drops below threshold',     'enabled' => true],
         ['notif_key' => 'salary',  'icon' => '💰', 'label' => 'Monthly Salary Reminder', 'sub' => 'Remind on 28th to process payroll',         'enabled' => false],
         ['notif_key' => 'expense', 'icon' => '🧾', 'label' => 'High Expense Alert',      'sub' => 'Alert when daily expense exceeds ₹10,000',  'enabled' => true],
@@ -295,10 +296,16 @@ class SettingsController extends Controller
     {
         try {
             $owner  = $request->user();
-            $notifs = NotificationPreference::where('user_id', $owner->id)->get();
+            $saved  = NotificationPreference::where('user_id', $owner->id)->get()->keyBy('notif_key');
+
+            // Every default is listed (so newly added alerts show up for existing
+            // users too), with the user's saved on/off applied on top.
+            $notifs = collect($this->defaultNotifications)->map(fn($d) => array_merge($d, [
+                'enabled' => $saved->has($d['notif_key']) ? (bool) $saved[$d['notif_key']]->enabled : $d['enabled'],
+            ]))->values();
 
             return $this->success('Notification preferences fetched.', [
-                'notifications' => $notifs->isEmpty() ? $this->defaultNotifications : $notifs,
+                'notifications' => $notifs,
             ]);
         } catch (\Exception $e) {
             return $this->error($e->getMessage(), 500);
