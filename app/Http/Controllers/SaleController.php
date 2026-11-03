@@ -9,6 +9,7 @@ use App\Services\DailySalesSummaryNotifier;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class SaleController extends Controller
 {
@@ -79,6 +80,48 @@ class SaleController extends Controller
         }
     }
 
+    private const FUELS = ['ms' => 'MS', 'hsd' => 'HSD', 'speed' => 'Power'];
+
+    private const CHECKED_FIELDS = [
+        'ms_volume', 'hsd_volume', 'speed_volume', 'rate_ms', 'rate_hsd', 'rate_speed',
+        'cash', 'card', 'phone_pe', 'credit_sale',
+    ];
+
+    // A sale must sell some fuel (each sold fuel needs a rate), testing can't exceed
+    // the volume dispensed, and something must have been collected.
+    private function assertValidSale(array $data): void
+    {
+        $errors = [];
+        $sold   = false;
+
+        foreach (self::FUELS as $key => $label) {
+            $volume  = (float) ($data["{$key}_volume"] ?? 0);
+            $testing = (float) ($data["{$key}_testing_volume"] ?? 0);
+
+            if ($testing > $volume) {
+                $errors["{$key}_testing_volume"] = "{$label} testing volume can't be more than the volume dispensed.";
+            } elseif ($volume - $testing > 0) {
+                $sold = true;
+                if ((float) ($data["rate_{$key}"] ?? 0) <= 0) {
+                    $errors["rate_{$key}"] = "Enter the {$label} rate.";
+                }
+            }
+        }
+
+        if (! $sold && ! $errors) {
+            $errors['ms_volume'] = 'Enter the volume sold for at least one fuel.';
+        }
+
+        $collected = ($data['cash'] ?? 0) + ($data['card'] ?? 0) + ($data['phone_pe'] ?? 0) + ($data['credit_sale'] ?? 0);
+        if ($collected <= 0) {
+            $errors['cash'] = 'Enter at least one collection (cash, card, UPI or credit).';
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
     // POST /sales
     public function store(Request $request): JsonResponse
     {
@@ -106,6 +149,8 @@ class SaleController extends Controller
                 'balance'      => 'sometimes|numeric',
                 'narration'    => 'sometimes|nullable|string',
             ]);
+
+            $this->assertValidSale($data);
 
             // Testing volume (fuel dispensed for meter calibration) isn't sold — deduct it
             // from the gross entered volume so the stored volume and revenue both reflect
@@ -180,6 +225,8 @@ class SaleController extends Controller
                 'balance'      => 'sometimes|numeric',
                 'narration'    => 'sometimes|nullable|string',
             ]);
+
+            $this->assertValidSale(array_merge($sale->only(self::CHECKED_FIELDS), $data));
 
             // Testing volume isn't sold — deduct it from the gross volume being set
             // this request before it becomes the stored/revenue-generating volume.
