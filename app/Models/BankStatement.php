@@ -15,11 +15,15 @@ class BankStatement extends Model
 
     protected $table = 'bank_statements';
 
+    public const TYPES = ['credit', 'debit'];
+
     protected $fillable = [
         'user_id',
         'station_id',
         'bank_name',
         'account_no',
+        'date',
+        'type',
         'statement_month',
         'opening_balance',
         'total_credits',
@@ -39,6 +43,7 @@ class BankStatement extends Model
         'total_debits'    => 'float',
         'closing_balance' => 'float',
         'shared_with_ca'  => 'boolean',
+        'date'            => 'date:Y-m-d',
         'shared_on'       => 'date:Y-m-d',
     ];
 

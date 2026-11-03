@@ -171,7 +171,7 @@ class AccountsController extends Controller
             [$col, $ids] = $this->scope($request);
 
             $query = $this->monthRange(BankStatement::with('station:id,name')->whereIn($col, $ids), $request)
-                ->orderBy('statement_month', 'desc')->orderBy('bank_name');
+                ->orderBy('statement_month', 'desc')->orderBy('date', 'desc')->orderBy('id', 'desc');
 
             if ($bank = $request->query('bank')) {
                 $query->where('bank_name', $bank);
@@ -188,35 +188,38 @@ class AccountsController extends Controller
         $req = $partial ? 'sometimes' : 'required';
 
         return [
-            'bank_name'       => "$req|string|max:100",
-            'account_no'      => 'sometimes|nullable|string|max:30',
-            'statement_month' => "$req|date_format:Y-m",
-            'opening_balance' => 'sometimes|numeric',
-            'total_credits'   => 'sometimes|numeric|min:0',
-            'total_debits'    => 'sometimes|numeric|min:0',
-            'closing_balance' => 'sometimes|numeric',
-            'statement_url'   => 'sometimes|nullable|url|max:500',
-            'shared_with_ca'  => 'sometimes|boolean',
-            'shared_on'       => 'sometimes|nullable|date',
-            'notes'           => 'sometimes|nullable|string',
+            'bank_name'      => "$req|string|max:100",
+            'account_no'     => 'sometimes|nullable|string|max:30',
+            'date'           => "$req|date",
+            'type'           => "$req|in:" . implode(',', BankStatement::TYPES),
+            'amount'         => "$req|numeric|gt:0",
+            'statement_url'  => 'sometimes|nullable|url|max:500',
+            'shared_with_ca' => 'sometimes|boolean',
+            'shared_on'      => 'sometimes|nullable|date',
+            'notes'          => 'sometimes|nullable|string',
         ];
     }
 
-    // One statement per bank account per month
-    private function assertUniqueStatement(User $owner, array $data, ?int $ignoreId = null): void
+    // Each entry is one credit or one debit: store the amount in the matching
+    // total column and derive the month from the date, so summaries and period
+    // filters work the same for old monthly rows and new transactions.
+    private function withAmounts(array $data, ?BankStatement $existing = null): array
     {
-        $exists = BankStatement::where('user_id', $owner->id)
-            ->where('bank_name', $data['bank_name'])
-            ->where('account_no', $data['account_no'] ?? null)
-            ->where('statement_month', $data['statement_month'])
-            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
-            ->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'statement_month' => 'A statement for this bank account and month already exists.',
-            ]);
+        if (array_key_exists('date', $data)) {
+            $data['statement_month'] = substr($data['date'], 0, 7);
         }
+
+        if (array_key_exists('type', $data) || array_key_exists('amount', $data)) {
+            $type   = $data['type'] ?? $existing?->type ?? 'credit';
+            $amount = $data['amount'] ?? ($existing ? max($existing->total_credits, $existing->total_debits) : 0);
+
+            $data['type']          = $type;
+            $data['total_credits'] = $type === 'credit' ? $amount : 0;
+            $data['total_debits']  = $type === 'debit' ? $amount : 0;
+        }
+        unset($data['amount']);
+
+        return $data;
     }
 
     // Marking as shared stamps today's date unless one was given; re-saving an
@@ -238,14 +241,13 @@ class AccountsController extends Controller
         try {
             $owner = $this->owner($request);
             $data  = $request->validate($this->statementRules(false));
-            $this->assertUniqueStatement($owner, $data);
 
             $statement = BankStatement::create(array_merge(
-                $this->withSharedDate($data),
+                $this->withSharedDate($this->withAmounts($data)),
                 ['user_id' => $owner->id, 'station_id' => $owner->station_id]
             ));
 
-            return $this->success('Statement added.', ['statement' => $statement->fresh()], 201);
+            return $this->success('Bank entry added.', ['statement' => $statement->fresh()], 201);
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (\Exception $e) {
@@ -261,11 +263,9 @@ class AccountsController extends Controller
             $statement = BankStatement::where('user_id', $owner->id)->findOrFail($id);
             $data      = $request->validate($this->statementRules(true));
 
-            $this->assertUniqueStatement($owner, array_merge($statement->only(['bank_name', 'account_no', 'statement_month']), $data), $id);
+            $statement->update($this->withSharedDate($this->withAmounts($data, $statement), $statement));
 
-            $statement->update($this->withSharedDate($data, $statement));
-
-            return $this->success('Statement updated.', ['statement' => $statement->fresh()]);
+            return $this->success('Bank entry updated.', ['statement' => $statement->fresh()]);
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
